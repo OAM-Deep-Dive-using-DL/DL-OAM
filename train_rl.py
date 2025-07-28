@@ -36,6 +36,10 @@ def parse_args():
                         help="Episodes between logging")
     parser.add_argument("--eval-interval", type=int, default=100,
                         help="Episodes between evaluations")
+    parser.add_argument("--num-episodes", type=int, default=None,
+                        help="Override number of episodes from config")
+    parser.add_argument("--max-steps", type=int, default=None,
+                        help="Override max steps per episode from config")
     
     return parser.parse_args()
 
@@ -168,8 +172,8 @@ def train(args: argparse.Namespace) -> None:
     metrics_logger = MetricsLogger(log_dir)
     
     # Training parameters
-    num_episodes = config['training']['num_episodes']
-    max_steps = config['training']['max_steps_per_episode']
+    num_episodes = args.num_episodes if args.num_episodes is not None else config['training']['num_episodes']
+    max_steps = args.max_steps if args.max_steps is not None else config['training']['max_steps_per_episode']
     epsilon_start = config['exploration']['epsilon_start']
     epsilon_end = config['exploration']['epsilon_end']
     epsilon_decay = config['exploration']['epsilon_decay']
@@ -181,7 +185,7 @@ def train(args: argparse.Namespace) -> None:
     episode_throughputs = []
     episode_handovers = []
     
-    print(f"Starting training for {num_episodes} episodes...")
+    print(f"Starting training for {num_episodes} episodes with max {max_steps} steps per episode...")
     start_time = time.time()
     
     for episode in range(1, num_episodes + 1):
@@ -296,3 +300,4 @@ def train(args: argparse.Namespace) -> None:
 if __name__ == "__main__":
     args = parse_args()
     train(args) 
+

@@ -36,6 +36,10 @@ def parse_args(args: List[str] = None) -> argparse.Namespace:
                              help="Episodes between logging")
     train_parser.add_argument("--eval-interval", type=int, default=100,
                              help="Episodes between evaluations")
+    train_parser.add_argument("--num-episodes", type=int, default=None,
+                             help="Override number of episodes from config")
+    train_parser.add_argument("--max-steps", type=int, default=None,
+                             help="Override max steps per episode from config")
     
     # Evaluate command
     eval_parser = subparsers.add_parser("evaluate", help="Evaluate a trained DQN agent")

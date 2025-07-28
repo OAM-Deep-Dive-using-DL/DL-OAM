@@ -16,6 +16,10 @@ oam:
 environment:
   pointing_error_std: 0.005  # 5 mrad pointing error
   rician_k_factor: 8.0       # 8 dB Rician K-factor
+  turbulence_strength: 1e-14 # Cn² value (typical clear air)
+  humidity: 50.0             # Relative humidity (%)
+  temperature: 20.0          # Temperature (°C)
+  pressure: 101.3            # Atmospheric pressure (kPa)
 
 enhanced_params:
   antenna_efficiency: 0.75   # 75% antenna efficiency
