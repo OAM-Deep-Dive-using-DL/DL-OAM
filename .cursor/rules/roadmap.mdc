@@ -1,0 +1,123 @@
+---
+alwaysApply: true
+---
+Agentic Roadmap: Deep Q-Learning for OAM Handover
+This document provides a granular, step-by-step technical roadmap designed for an AI development agent (like Cursor) to implement the OAM Handover project using a Deep Q-Network (DQN).
+Part 1: Deep Dive into Deep Q-Learning for OAM Handover
+Before writing code, it's crucial to understand the "why" and "how" of using Reinforcement Learning for this problem.
+The Conceptual Shift: From Imitation to Strategy
+The previous supervised learning approach trains a model to imitate a dataset of correct answers. The Reinforcement Learning (RL) approach using a DQN is fundamentally different and more powerful: it trains an agent to learn an optimal strategy through trial-and-error interaction with the environment.
+Agent: The decision-making logic (our DQN model). Its goal is to maximize long-term rewards.
+Environment: Our high-fidelity physics simulator (channel_simulator.py). It provides the "reality" for the agent to learn in.
+The Core Interaction Loop
+The entire system operates on a simple, powerful loop:
+Observe State (S): The agent observes the current state of the wireless channel (e.g., SINR, user velocity).
+Take Action (A): Based on the state, the agent decides on an action (e.g., 'STAY' on the current OAM mode, or 'SWITCH').
+Receive Reward (R) & New State (S′): The environment (our simulator) executes the action. It then calculates the immediate reward (e.g., high throughput is a good reward, switching modes has a small penalty) and determines the new state of the channel for the next time step.
+Learn: The agent uses the outcome (S, A, R, S') to update its internal "strategy" to make better decisions in the future. This loop repeats thousands of times, allowing the agent to learn from experience.
+From Q-Table to Q-Network: The "Deep" in DQN
+Traditional Q-Learning uses a giant table (a "Q-Table") to store the expected future reward for every possible state-action pair. For our problem, the state (containing continuous values like SINR) is infinitely large, making a table impossible.
+This is where the neural network comes in. We use a Deep Q-Network (DQN) to act as a smart function that approximates the Q-Table.
+Input: The State vector S.
+Output: A Q-value for each possible action. [Q(S, 'STAY'), Q(S, 'SWITCH_UP'), Q(S, 'SWITCH_DOWN')]
+The agent simply chooses the action with the highest Q-value. The "learning" part is training this network.
+The Learning Rule: The Bellman Equation
+The network learns by trying to make its Q-value predictions satisfy the Bellman equation. The equation essentially says:
+"The value of being in a state and taking an action is the immediate reward you get, plus the discounted value of the best possible action you can take in the next state."
+Mathematically, we train the network to minimize the difference between its prediction, Q(S,A), and a target value, Y:
+Y=R+γ⋅a′max​Q(S′,a′)
+R: The immediate reward received after taking action A.
+γ: The discount factor (e.g., 0.99), which makes future rewards slightly less valuable than immediate ones.
+maxa′​Q(S′,a′): The network's own estimate of the best possible Q-value from the next state, S′.
+By repeatedly minimizing this difference, the network's Q-value predictions become more and more accurate, leading to an optimal decision-making policy.
+Key Mechanisms for Stable Learning
+Two tricks are essential for making DQN training stable:
+Experience Replay: We store thousands of (S, A, R, S') tuples in a "replay buffer". During training, we feed the network random mini-batches from this buffer. This breaks the correlation between consecutive experiences and stabilizes learning.
+Target Network: We use a second, identical neural network that is updated only periodically. This "target network" is used to calculate the target value Y. This provides a stable target for the main network to learn towards, preventing a "dog chasing its own tail" problem during training.
+Part 2: Granular Step-by-Step Project Plan
+This plan breaks down the project into explicit tasks, specifying filenames and methods for the AI agent to implement.
+Phase 0: Environment Setup
+Task 0.1: Create a Conda environment: conda create -n oam_rl_env python=3.10.
+Task 0.2: Activate the environment: conda activate oam_rl_env.
+Task 0.3: Install libraries: pip install numpy scipy torch gymnasium plotly pyyaml matplotlib seaborn.
+Task 0.4: Create the project directory structure as defined in the roadmap.
+Phase 1: Building the Simulation Environment
+Goal: Create a high-fidelity physics simulator and wrap it in a standard RL environment interface.
+File: simulator/channel_simulator.py
+Task 1.1: Define a ChannelSimulator class.
+Task 1.2: Implement methods for each physical impairment, directly translating the formulas from the "Mathematical Foundations" document:
+_calculate_path_loss(distance)
+_generate_turbulence_screen()
+_calculate_crosstalk(distorted_field)
+_get_rician_fading_gain()
+_get_pointing_error_loss(oam_mode)
+_get_atmospheric_attenuation(distance)
+Task 1.3: Implement a main run_step(user_position, current_oam_mode) method that calls all impairment methods in sequence to calculate and return the final channel matrix H.
+File: environment/oam_env.py
+Task 1.4: Define the OAM_Env(gym.Env) class.
+Task 1.5: Implement __init__(self):
+Instantiate the self.simulator = ChannelSimulator().
+Define the action space: self.action_space = spaces.Discrete(3) (0: STAY, 1: UP, 2: DOWN).
+Define the observation space (the shape of the state vector): self.observation_space = spaces.Box(...).
+Task 1.6: Implement reset(self):
+Reset the user's position, velocity, and other simulation parameters to a random starting point.
+Run one step of the simulator to get the initial channel matrix H.
+Assemble and return the initial state vector S.
+Task 1.7: Implement step(self, action):
+Update the active OAM mode based on the action.
+Update the user's position using the Random Waypoint model.
+Call self.simulator.run_step(...) to get the new channel matrix H′.
+Calculate the new SINRnew​ from H′.
+Calculate the reward: reward = (B * log2(1 + SINR_new)) - (C_handover if action != 0 else 0).
+Assemble the next_state vector.
+Return (next_state, reward, done, truncated, info).
+Phase 2: Building the DQN Agent
+Goal: Create the neural network model and the agent logic that controls it.
+File: models/dqn_model.py
+Task 2.1: Define a DQN(nn.Module) class in PyTorch.
+Task 2.2: In __init__, define the MLP layers (e.g., 3 hidden layers with nn.Linear and nn.ReLU). The input size must match the state vector size, and the output size must match the number of actions.
+Task 2.3: Implement the forward(self, state) method that passes the state through the layers.
+File: models/agent.py
+Task 2.4: Define an Agent class.
+Task 2.5: In __init__, create:
+self.policy_net = DQN(...)
+self.target_net = DQN(...) and load its weights from the policy net.
+self.optimizer = optim.AdamW(self.policy_net.parameters(), ...)
+self.replay_buffer = ReplayBuffer(...) (a separate class to store experiences).
+Task 2.6: Implement choose_action(self, state, epsilon):
+With probability epsilon, return a random action.
+Otherwise, pass the state through self.policy_net, and return the action with the highest Q-value (torch.argmax).
+Task 2.7: Implement learn(self):
+Sample a mini-batch from self.replay_buffer.
+Calculate the target Q-values, Y, for the batch using the Bellman equation and the self.target_net.
+Calculate the current Q-values from self.policy_net.
+Compute the loss (e.g., nn.SmoothL1Loss) between the current and target Q-values.
+Perform backpropagation: optimizer.zero_grad(), loss.backward(), optimizer.step().
+Phase 3: Training the Agent
+Goal: Write the main script that orchestrates the RL training loop.
+File: train_rl.py
+Task 3.1: Set up argument parsing for hyperparameters (learning rate, episodes, etc.).
+Task 3.2: Instantiate the environment: env = OAM_Env().
+Task 3.3: Instantiate the agent: agent = Agent(...).
+Task 3.4: Implement the main training loop: for episode in range(num_episodes): ....
+Task 3.5: Inside the loop, implement the step-by-step interaction logic:
+state = env.reset()
+for t in range(max_steps_per_episode):
+action = agent.choose_action(state, epsilon)
+next_state, reward, done, _, _ = env.step(action)
+agent.replay_buffer.push(state, action, reward, next_state, done)
+agent.learn()
+if done: break
+Task 3.6: Add logic to decrease epsilon over time (exploration-exploitation trade-off).
+Task 3.7: Add logic to periodically update the target_net with weights from the policy_net.
+Task 3.8: Add logic to log rewards to TensorBoard and save the trained model weights.
+Phase 4 & 5: Evaluation and Reporting
+Goal: Evaluate the trained agent and generate standardized reports.
+File: evaluate_rl.py
+Task 4.1: Load the trained policy_net weights.
+Task 4.2: Run a number of evaluation episodes with epsilon = 0 (no random actions).
+Task 4.3: Collect all the KPIs (Throughput, Handover Rate, etc.) during these episodes.
+Task 4.4: Generate the interactive dashboard visualizations using Plotly.
+Task 5.1: Save the simulation parameters, RL hyperparameters, and final KPI results to a structured YAML file.
+File: main.py
+Task 5.2: Create a simple command-line interface to run the entire pipeline: python main.py --train, python main.py --evaluate.

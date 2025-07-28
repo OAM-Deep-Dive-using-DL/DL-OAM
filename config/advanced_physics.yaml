@@ -1,0 +1,32 @@
+# Advanced Physics Parameters for OAM Simulation
+
+# FFT-based phase screen parameters
+advanced_physics:
+  # General settings
+  use_fft_phase_screen: true  # Use FFT-based phase screen generation (McGlamery method)
+  
+  # Phase screen parameters
+  phase_screen_resolution: 256  # Resolution of phase screens (grid size)
+  phase_screen_size: 2.0  # Size of phase screen in meters
+  
+  # Turbulence spectrum parameters
+  kolmogorov_spectrum: true  # Use Kolmogorov spectrum (false for non-Kolmogorov)
+  spectral_index: 3.6667  # Spectral index (11/3 for Kolmogorov, adjustable for non-Kolmogorov)
+  
+  # Scale parameters
+  inner_scale: 0.001  # Inner scale of turbulence (meters)
+  outer_scale: 100.0  # Outer scale of turbulence (meters)
+  
+  # Multi-layer atmospheric modeling
+  turbulence_layers: 3  # Number of turbulence layers (1 for single layer)
+  
+  # Advanced aperture averaging
+  enhanced_aperture_averaging: true  # Use enhanced aperture averaging model
+  
+# Enhanced parameters
+enhanced_params:
+  antenna_efficiency: 0.8  # Default antenna efficiency
+  implementation_loss_dB: 2.0  # Implementation losses
+  atmospheric_noise_temp: 5.0  # Atmospheric noise temperature (K)
+  quantum_noise_temp: 0.1  # Quantum noise temperature (K)
+  receiver_aperture_diameter: 0.5  # meters, for aperture averaging 

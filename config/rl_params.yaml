@@ -1,0 +1,34 @@
+# Deep Q-Learning Parameters
+
+# Training parameters
+training:
+  num_episodes: 100  # Reduced from 10000 for testing
+  max_steps_per_episode: 200  # Reduced from 1000 for testing
+  batch_size: 64
+  learning_rate: 0.0001
+  gamma: 0.99  # discount factor
+  target_update_freq: 5  # episodes between target network updates (reduced from 10)
+  
+# Exploration parameters
+exploration:
+  epsilon_start: 1.0
+  epsilon_end: 0.01
+  epsilon_decay: 0.95  # multiplicative factor (faster decay for testing)
+  
+# Experience replay parameters
+replay_buffer:
+  capacity: 10000  # Reduced from 100000 for testing
+  min_samples_to_learn: 200  # Reduced from 1000 for testing
+  
+# Neural network architecture
+network:
+  state_dim: 8  # [SINR, distance, velocity, current_mode, etc.]
+  action_dim: 3  # [STAY, UP, DOWN]
+  hidden_layers: [64, 64]  # Smaller network for faster training
+  activation: "relu"
+  
+# Evaluation parameters
+evaluation:
+  eval_episodes: 5  # Reduced from 100 for testing
+  eval_frequency: 20  # episodes between evaluations (reduced from 500)
+  save_model_frequency: 50  # episodes between model saves (reduced from 1000) 
