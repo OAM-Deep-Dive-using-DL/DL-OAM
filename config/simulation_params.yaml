@@ -4,36 +4,23 @@ system:
   frequency: 28.0e9          # 28 GHz mmWave
   bandwidth: 400e6           # 400 MHz
   tx_power_dBm: 30.0         # 30 dBm transmit power
-  noise_figure_dB: 8.0       # 8 dB noise figure (more realistic for mmWave)
+  noise_figure_dB: 8.0       # 8 dB noise figure
   noise_temp: 290.0          # 290 K noise temperature
 
 oam:
   min_mode: 1                # Minimum OAM mode
   max_mode: 8                # Maximum OAM mode
   mode_spacing: 1            # Mode spacing
-  beam_width: 0.03           # 30 mrad beam width (more realistic)
+  beam_width: 0.03           # 30 mrad beam width
 
 environment:
-  turbulence_strength: 2.0e-14  # Moderate turbulence Cn2 (more realistic)
-  pointing_error_std: 0.005     # 5 mrad pointing error (more realistic)
+  turbulence_strength: 2.0e-14  # Moderate turbulence Cn2
+  pointing_error_std: 0.005     # 5 mrad pointing error
   rician_k_factor: 8.0          # 8 dB Rician K-factor
 
 enhanced_params:
-  antenna_efficiency: 0.75      # 75% antenna efficiency (realistic for mmWave)
+  antenna_efficiency: 0.75      # 75% antenna efficiency
   implementation_loss_dB: 3.0   # 3 dB implementation losses
-  atmospheric_noise_temp: 8.0   # 8 K atmospheric noise temperature
-  quantum_noise_temp: 0.05      # Reduced quantum noise
-  receiver_aperture_diameter: 0.3  # 30 cm receiver aperture (more realistic)
-
-advanced_physics:
-  use_fft_phase_screen: true
-  phase_screen_resolution: 256
-  phase_screen_size: 2.0
-  inner_scale: 0.002            # 2 mm inner scale (more realistic)
-  outer_scale: 50.0             # 50 m outer scale (more realistic)
-  turbulence_layers: 3          # 3-layer atmospheric model
-  kolmogorov_spectrum: true
-  spectral_index: 3.67          # 11/3 = 3.67 for Kolmogorov
 
 # RL Training Parameters
 training:
@@ -52,7 +39,7 @@ rl_env:
   throughput_factor: 1.0
   handover_penalty: 0.1
   outage_penalty: 0.5
-  sinr_threshold: -5.0          # -5 dB SINR threshold (more realistic)
+  sinr_threshold: -5.0          # -5 dB SINR threshold
   
 # User Mobility
 mobility:

@@ -90,6 +90,10 @@ def evaluate(args: argparse.Namespace) -> None:
     
     os.makedirs(output_dir, exist_ok=True)
     
+    # Create plots directory
+    plots_dir = os.path.join(output_dir, 'plots')
+    os.makedirs(plots_dir, exist_ok=True)
+    
     # Load configuration
     if args.config is None:
         config_path = os.path.join(model_dir, "config.yaml")
@@ -205,7 +209,7 @@ def evaluate(args: argparse.Namespace) -> None:
     
     # 1. Plot Q-values
     action_names = ["STAY", "UP", "DOWN"]
-    q_plot_path = os.path.join(output_dir, "q_values.png")
+    q_plot_path = os.path.join(plots_dir, "q_values.png")
     visualize_q_values(q_values, action_names, q_plot_path)
     
     # 2. Plot SINR vs. Distance with color indicating OAM mode
@@ -226,8 +230,7 @@ def evaluate(args: argparse.Namespace) -> None:
     plt.grid(True, alpha=0.3)
     
     # Save SINR plot
-    sinr_plot_path = os.path.join(args.output_dir, 'plots', 'sinr_vs_distance.png')
-    os.makedirs(os.path.dirname(sinr_plot_path), exist_ok=True)
+    sinr_plot_path = os.path.join(plots_dir, 'sinr_distance_mode.png')
     plt.savefig(sinr_plot_path)
     
     # 3. Create interactive dashboard
