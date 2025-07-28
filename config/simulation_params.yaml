@@ -14,13 +14,12 @@ oam:
   beam_width: 0.03           # 30 mrad beam width
 
 environment:
-  turbulence_strength: 2.0e-14  # Moderate turbulence Cn2
-  pointing_error_std: 0.005     # 5 mrad pointing error
-  rician_k_factor: 8.0          # 8 dB Rician K-factor
+  pointing_error_std: 0.005  # 5 mrad pointing error
+  rician_k_factor: 8.0       # 8 dB Rician K-factor
 
 enhanced_params:
-  antenna_efficiency: 0.75      # 75% antenna efficiency
-  implementation_loss_dB: 3.0   # 3 dB implementation losses
+  antenna_efficiency: 0.75   # 75% antenna efficiency
+  implementation_loss_dB: 3.0 # 3 dB implementation losses
 
 # RL Training Parameters
 training:
@@ -39,10 +38,10 @@ rl_env:
   throughput_factor: 1.0
   handover_penalty: 0.1
   outage_penalty: 0.5
-  sinr_threshold: -5.0          # -5 dB SINR threshold
+  sinr_threshold: -5.0       # -5 dB SINR threshold
   
 # User Mobility
 mobility:
-  max_speed: 5.0                # 5 m/s maximum speed (walking/slow vehicle)
-  min_speed: 0.5                # 0.5 m/s minimum speed
-  direction_change_prob: 0.1    # 10% probability of direction change per step 
+  max_speed: 5.0             # 5 m/s maximum speed (walking/slow vehicle)
+  min_speed: 0.5             # 0.5 m/s minimum speed
+  direction_change_prob: 0.1 # 10% probability of direction change per step 

@@ -6,15 +6,13 @@ from scipy.constants import c as speed_of_light
 
 class ChannelSimulator:
     """
-    Physics simulator for OAM wireless channels.
+    Basic physics simulator for OAM wireless channels.
     
-    Simulates basic physical impairments that affect OAM mode transmission:
+    Simulates fundamental physical impairments that affect OAM mode transmission:
     - Path loss
-    - Atmospheric turbulence (simplified model)
     - Crosstalk between OAM modes
     - Rician fading
     - Pointing errors
-    - Atmospheric attenuation
     """
     
     def __init__(self, config: Optional[Dict[str, Any]] = None):
@@ -28,7 +26,7 @@ class ChannelSimulator:
         self.frequency = 28.0e9  # 28 GHz (mmWave)
         self.wavelength = speed_of_light / self.frequency
         self.tx_power_dBm = 30.0  # dBm
-        self.noise_figure_dB = 8.0  # 8 dB (updated for more realistic mmWave)
+        self.noise_figure_dB = 8.0  # 8 dB
         self.noise_temp = 290.0  # K
         self.bandwidth = 400e6  # 400 MHz
         
@@ -36,10 +34,9 @@ class ChannelSimulator:
         self.min_mode = 1
         self.max_mode = 8
         self.mode_spacing = 1
-        self.beam_width = 0.03  # 30 mrad (more realistic)
+        self.beam_width = 0.03  # 30 mrad
         
         # Environment parameters  
-        self.turbulence_strength = 2.0e-14  # Moderate turbulence Cn^2
         self.pointing_error_std = 0.005  # 5 mrad
         self.rician_k_factor = 8.0  # 8 dB
         
@@ -97,8 +94,6 @@ class ChannelSimulator:
         # Update environment parameters
         if 'environment' in config:
             env_config = config['environment']
-            if 'turbulence_strength' in env_config:
-                self.turbulence_strength = float(env_config['turbulence_strength'])
             if 'pointing_error_std' in env_config:
                 self.pointing_error_std = float(env_config['pointing_error_std'])
             if 'rician_k_factor' in env_config:
@@ -143,10 +138,6 @@ class ChannelSimulator:
         if not (0.001 <= self.beam_width <= 1.0):  # 1 mrad to 1 rad
             raise ValueError(f"Beam width {self.beam_width} rad is outside reasonable range (0.001-1.0 rad)")
         
-        # Turbulence strength validation
-        if not (1e-18 <= self.turbulence_strength <= 1e-10):
-            raise ValueError(f"Turbulence strength {self.turbulence_strength} is outside reasonable range")
-        
         # Pointing error validation
         if not (0.0001 <= self.pointing_error_std <= 0.1):  # 0.1 mrad to 100 mrad
             raise ValueError(f"Pointing error {self.pointing_error_std} rad is outside reasonable range")
@@ -171,122 +162,41 @@ class ChannelSimulator:
         path_loss_linear = (4 * np.pi * distance / self.wavelength) ** 2
         return path_loss_linear
     
-    def _generate_turbulence_screen(self, distance: float) -> np.ndarray:
+    def _calculate_crosstalk(self, distance: float) -> np.ndarray:
         """
-        Generate simplified atmospheric turbulence phase screen.
+        Calculate basic crosstalk between OAM modes.
         
         Args:
             distance: Propagation distance in meters
             
         Returns:
-            Phase perturbation matrix for each OAM mode
+            Crosstalk matrix
         """
-        # Calculate Fried parameter (r0)
-        cn2_integral = self.turbulence_strength * distance
-        r0 = (0.423 * (self.k**2) * cn2_integral) ** (-3/5)
+        # Initialize crosstalk matrix
+        crosstalk_matrix = np.eye(self.num_modes, dtype=complex)
         
-        # Calculate beam wandering variance
-        beam_wander_variance = 2.42 * self.turbulence_strength * (self.k ** 2) * (distance ** 3)
-        
-        # Calculate scintillation index
-        rytov_variance = 1.23 * self.turbulence_strength * (self.k ** (7/6)) * (distance ** (11/6))
-        scintillation_index = min(rytov_variance, 1.0)  # Simplified for weak turbulence
-        
-        # Generate phase perturbations for each mode
-        phase_perturbations = np.zeros((self.num_modes, self.num_modes), dtype=complex)
+        # Add basic crosstalk between adjacent modes
+        # Crosstalk increases with distance
+        distance_factor = min(1.0, distance / 1000.0)
         
         for i in range(self.num_modes):
             mode_i = i + self.min_mode
             for j in range(self.num_modes):
-                mode_j = j + self.min_mode
-                
-                # Phase variance increases with mode number difference
-                if i == j:
-                    # Diagonal elements (same mode)
-                    # Include scintillation effects
-                    variance = (mode_i / max(r0, 1e-10)) ** (5/3)
-                    variance *= (1 + scintillation_index)  # Add scintillation
-                else:
-                    # Off-diagonal elements (crosstalk)
-                    # Enhanced coupling model based on mode overlap
-                    r0_safe = max(r0, 1e-10)
+                if i != j:
+                    mode_j = j + self.min_mode
                     mode_diff = abs(mode_i - mode_j)
                     
-                    # Simplified coupling based on mode difference
-                    coupling_strength = self._calculate_mode_coupling(mode_i, mode_j, r0_safe, 0)
-                    variance = coupling_strength * (1.0) ** (5/6)  # Base dependency
-                
-                # Add beam wandering effect to phase variance
-                if i == j:
-                    variance += beam_wander_variance
-                
-                # Generate random phase with improved distribution
-                phase = np.random.normal(0, np.sqrt(max(variance, 1e-15)))
-                amplitude = 1.0
-                
-                # Add amplitude fluctuations due to scintillation
-                if i == j:
-                    amplitude_var = scintillation_index * 0.5
-                    amplitude *= np.exp(np.random.normal(0, np.sqrt(amplitude_var)))
-                
-                phase_perturbations[i, j] = amplitude * np.exp(1j * phase)
-        
-        return phase_perturbations
-    
-    def _calculate_mode_coupling(self, mode_l: int, mode_m: int, r0: float, distance: float) -> float:
-        """
-        Calculate OAM mode coupling coefficient based on atmospheric distortion.
-        
-        Args:
-            mode_l: First OAM mode number
-            mode_m: Second OAM mode number  
-            r0: Fried parameter
-            distance: Propagation distance
-            
-        Returns:
-            Coupling coefficient
-        """
-        if mode_l == mode_m:
-            return 1.0
-            
-        mode_diff = abs(mode_l - mode_m)
-        
-        # Simplified coupling model for OAM modes
-        if mode_diff == 1:
-            base_coupling = 0.15  # Adjacent mode coupling
-        elif mode_diff == 2:
-            base_coupling = 0.08  # Second-order coupling
-        elif mode_diff == 3:
-            base_coupling = 0.04  # Third-order coupling
-        else:
-            base_coupling = 0.01 * np.exp(-mode_diff / 4.0)  # Exponential decay for higher orders
-        
-        # Turbulence-induced coupling enhancement
-        beam_diameter = 0.5  # Characteristic beam size (meters)
-        turbulence_ratio = beam_diameter / max(r0, 0.001)  # Prevent division by zero
-        
-        # Simplified turbulence factor
-        turbulence_factor = 1.0 + 0.2 * np.sqrt(turbulence_ratio)
-        
-        # Calculate final coupling
-        coupling = base_coupling * turbulence_factor
-        
-        # Apply physical limits
-        max_coupling = 0.4 if mode_diff <= 2 else 0.2
-        return min(coupling, max_coupling)
-    
-    def _calculate_crosstalk(self, distorted_field: np.ndarray) -> np.ndarray:
-        """
-        Calculate crosstalk between OAM modes due to distortions.
-        
-        Args:
-            distorted_field: Distorted field matrix from turbulence
-            
-        Returns:
-            Crosstalk matrix with mode coupling
-        """
-        # Use distorted field directly as crosstalk matrix
-        crosstalk_matrix = distorted_field.copy()
+                    # Simple crosstalk model - decreases with mode difference
+                    if mode_diff == 1:
+                        coupling = 0.1 * distance_factor  # 10% coupling for adjacent modes
+                    elif mode_diff == 2:
+                        coupling = 0.05 * distance_factor  # 5% coupling for modes 2 steps apart
+                    else:
+                        coupling = 0.02 * distance_factor / mode_diff  # Lower coupling for distant modes
+                    
+                    # Add random phase
+                    phase = np.random.uniform(0, 2 * np.pi)
+                    crosstalk_matrix[i, j] = coupling * np.exp(1j * phase)
         
         # Normalize to ensure energy conservation
         for i in range(self.num_modes):
@@ -340,6 +250,10 @@ class ChannelSimulator:
         """
         Calculate loss due to pointing errors with OAM mode sensitivity.
         
+        Pointing errors occur when there's misalignment between the transmitter and receiver.
+        Higher OAM modes are more sensitive to pointing errors due to their more complex
+        phase structure.
+        
         Args:
             oam_mode: Current OAM mode
             
@@ -356,27 +270,6 @@ class ChannelSimulator:
         pointing_loss = np.exp(-(pointing_error * mode_sensitivity)**2 / (2 * self.beam_width**2))
         
         return max(pointing_loss, 0.01)  # Minimum 1% transmission
-    
-    def _get_atmospheric_attenuation(self, distance: float) -> float:
-        """
-        Calculate atmospheric attenuation.
-        
-        Args:
-            distance: Distance in meters
-            
-        Returns:
-            Atmospheric attenuation in linear scale
-        """
-        # Simplified model for atmospheric attenuation
-        # At mmWave frequencies, attenuation is primarily due to oxygen and water vapor
-        
-        # Typical attenuation at 28 GHz is around 0.1 dB/km for clear air
-        attenuation_dB_per_km = 0.1
-        
-        # Convert to linear scale
-        attenuation_linear = 10 ** (attenuation_dB_per_km * distance / 10000)
-        
-        return attenuation_linear
     
     def run_step(self, user_position: np.ndarray, current_oam_mode: int) -> Tuple[np.ndarray, float]:
         """
@@ -408,28 +301,21 @@ class ChannelSimulator:
         # 1. Path loss
         path_loss = self._calculate_path_loss(distance)
         
-        # 2. Atmospheric turbulence
-        turbulence_screen = self._generate_turbulence_screen(distance)
+        # 2. Crosstalk
+        crosstalk_matrix = self._calculate_crosstalk(distance)
         
-        # 3. Crosstalk
-        crosstalk_matrix = self._calculate_crosstalk(turbulence_screen)
-        
-        # 4. Rician fading
+        # 3. Rician fading
         fading_matrix = self._get_rician_fading_gain()
         
-        # 5. Pointing error (specific to current mode)
+        # 4. Pointing error (specific to current mode)
         pointing_loss = self._get_pointing_error_loss(current_oam_mode)
-        
-        # 6. Atmospheric attenuation
-        attenuation = self._get_atmospheric_attenuation(distance)
         
         # Combine all effects to get channel matrix H
         # Add a small epsilon to avoid division by zero
         path_loss = max(path_loss, 1e-10)
-        attenuation = max(attenuation, 1e-10)
         
         # Calculate channel gain (inverse of losses)
-        channel_gain = 1.0 / (path_loss * attenuation)
+        channel_gain = 1.0 / path_loss
         
         # Apply antenna efficiency to signal
         channel_gain = channel_gain * self.antenna_efficiency
