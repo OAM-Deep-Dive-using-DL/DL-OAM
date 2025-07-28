@@ -9,7 +9,7 @@ system:
 
 oam:
   min_mode: 1                # Minimum OAM mode
-  max_mode: 8                # Maximum OAM mode
+  max_mode: 6                # Maximum OAM mode (reduced from 8 for faster testing)
   mode_spacing: 1            # Mode spacing
   beam_width: 0.03           # 30 mrad beam width
 
@@ -23,21 +23,21 @@ enhanced_params:
 
 # RL Training Parameters
 training:
-  episodes: 1000
-  max_steps_per_episode: 500
-  learning_rate: 0.0003
+  episodes: 500              # Increased from 100
+  max_steps_per_episode: 500 # Increased from 200
+  learning_rate: 0.0001      # Decreased for more stable learning
   epsilon_start: 1.0
   epsilon_end: 0.01
-  epsilon_decay: 0.995
-  batch_size: 64
-  memory_size: 10000
-  target_update_interval: 10
+  epsilon_decay: 0.99        # Slower decay for more exploration
+  batch_size: 128            # Increased for more stable learning
+  memory_size: 50000         # Increased for more diverse experiences
+  target_update_interval: 10 # Episodes between target network updates
   
 # RL Environment Parameters  
 rl_env:
-  throughput_factor: 1.0
-  handover_penalty: 0.1
-  outage_penalty: 0.5
+  throughput_factor: 1.0     # Weight for throughput in reward
+  handover_penalty: 0.2      # Increased penalty for handovers
+  outage_penalty: 1.0        # Increased penalty for outages
   sinr_threshold: -5.0       # -5 dB SINR threshold
   
 # User Mobility
