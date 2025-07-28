@@ -183,7 +183,7 @@ class ChannelSimulator:
             mode_i = i + self.min_mode
             for j in range(self.num_modes):
                 if i != j:
-                mode_j = j + self.min_mode
+                    mode_j = j + self.min_mode
                     mode_diff = abs(mode_i - mode_j)
                     
                     # Simple crosstalk model - decreases with mode difference
@@ -191,7 +191,7 @@ class ChannelSimulator:
                         coupling = 0.1 * distance_factor  # 10% coupling for adjacent modes
                     elif mode_diff == 2:
                         coupling = 0.05 * distance_factor  # 5% coupling for modes 2 steps apart
-        else:
+                    else:
                         coupling = 0.02 * distance_factor / mode_diff  # Lower coupling for distant modes
                     
                     # Add random phase
@@ -207,7 +207,7 @@ class ChannelSimulator:
                 crosstalk_matrix[i, :] = crosstalk_matrix[i, :] / np.sqrt(total_power)
         
         return crosstalk_matrix
-        
+    
     def _get_rician_fading_gain(self) -> np.ndarray:
         """
         Calculate Rician fading channel gains.
@@ -381,4 +381,4 @@ class ChannelSimulator:
         implementation_loss_linear = 10 ** (self.implementation_loss_dB / 10)
         total_noise = thermal_noise * implementation_loss_linear
         
-        return total_noise 
+        return total_noise
