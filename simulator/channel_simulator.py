@@ -245,7 +245,7 @@ class ChannelSimulator:
             # Off-diagonal elements (mode coupling due to turbulence)
             for j in range(self.num_modes):
                 if i != j:
-                mode_j = j + self.min_mode
+                    mode_j = j + self.min_mode
                     mode_diff = abs(mode_i - mode_j)
                     
                     # Mode coupling strength decreases with mode difference
@@ -281,8 +281,8 @@ class ChannelSimulator:
             mode_i = i + self.min_mode
             for j in range(self.num_modes):
                 if i != j:
-                mode_j = j + self.min_mode
-                mode_diff = abs(mode_i - mode_j)
+                    mode_j = j + self.min_mode
+                    mode_diff = abs(mode_i - mode_j)
                 
                     # Diffraction-based coupling
                     # Higher modes and larger differences have lower coupling
