@@ -8,6 +8,7 @@ from typing import List, Dict, Any, Optional
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from train_rl import train as train_agent
+from train_stable_rl import train as train_stable_agent
 from evaluate_rl import evaluate as evaluate_agent
 
 
@@ -41,6 +42,29 @@ def parse_args(args: List[str] = None) -> argparse.Namespace:
     train_parser.add_argument("--max-steps", type=int, default=None,
                              help="Override max steps per episode from config")
     
+    # Train with stable rewards command
+    train_stable_parser = subparsers.add_parser("train-stable", help="Train a DQN agent with stable rewards")
+    train_stable_parser.add_argument("--config", type=str, default="config/rl_params.yaml",
+                                   help="Path to RL configuration file")
+    train_stable_parser.add_argument("--sim-config", type=str, default="config/simulation_params.yaml",
+                                   help="Path to simulation configuration file")
+    train_stable_parser.add_argument("--stable-config", type=str, default="config/stable_reward_params.yaml",
+                                   help="Path to stable reward configuration file")
+    train_stable_parser.add_argument("--output-dir", type=str, default="results",
+                                   help="Directory to save results")
+    train_stable_parser.add_argument("--seed", type=int, default=42,
+                                   help="Random seed")
+    train_stable_parser.add_argument("--no-gpu", action="store_true",
+                                   help="Disable GPU acceleration")
+    train_stable_parser.add_argument("--log-interval", type=int, default=10,
+                                   help="Episodes between logging")
+    train_stable_parser.add_argument("--eval-interval", type=int, default=100,
+                                   help="Episodes between evaluations")
+    train_stable_parser.add_argument("--num-episodes", type=int, default=None,
+                                   help="Override number of episodes from config")
+    train_stable_parser.add_argument("--max-steps", type=int, default=None,
+                                   help="Override max steps per episode from config")
+    
     # Evaluate command
     eval_parser = subparsers.add_parser("evaluate", help="Evaluate a trained DQN agent")
     eval_parser.add_argument("--model-dir", type=str, required=True,
@@ -73,11 +97,14 @@ def main():
     
     if args.command == "train":
         train_agent(args)
+    elif args.command == "train-stable":
+        train_stable_agent(args)
     elif args.command == "evaluate":
         evaluate_agent(args)
     else:
-        print("Please specify a command: train or evaluate")
+        print("Please specify a command: train, train-stable, or evaluate")
         print("Example: python main.py train")
+        print("Example: python main.py train-stable")
         print("Example: python main.py evaluate --model-dir results/train_20230101_120000")
         sys.exit(1)
 
