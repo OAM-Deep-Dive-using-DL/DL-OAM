@@ -1,5 +1,162 @@
 ---
-description:
-globs:
-alwaysApply: false
+alwaysApply: true
 ---
+
+Mathematical Foundations for OAM Channel Simulation in 6G Mobile Networks
+
+This document provides a detailed breakdown of the mathematical formulas and physical models required to simulate the OAM-based wireless channel as defined in the project’s rules.md. The implementation of these equations in a Python simulator is the mandatory first step (Rule 2.2) and will serve as the ground truth for training the deep learning model.
+
+1. The Transmitted OAM Signal: Laguerre-Gaussian (LG) Modes
+
+The ideal basis for representing OAM beams is the set of Laguerre-Gaussian (LG) modes. An individual mode, $\text{LG}{p,l}$, is defined by its radial index $p$ and its azimuthal index $l$ (the “topological charge”). The complex electric field of an $\text{LG}{p,l}$ beam at a distance $z$ is given by:
+
+$$
+U_{p,l}(r, \phi, z) = C_{p,l} \frac{w_0}{w(z)} \left( \frac{\sqrt{2}r}{w(z)} \right)^{|l|} L_p^{|l|} \left( \frac{2r^2}{w(z)^2} \right) \exp\left(-\frac{r^2}{w(z)^2}\right) \exp\left(-i k \frac{r^2}{2R(z)}\right) \exp(-il\phi) \exp\left(i(2p+|l|+1)\zeta(z)\right)
+$$
+
+Where:
+	•	$(r, \phi, z)$ are the cylindrical coordinates.
+	•	$l$ is the OAM mode number (topological charge).
+	•	$w(z) = w_0 \sqrt{1 + (z/z_R)^2}$ is the beam radius at distance $z$.
+	•	$w_0$ is the beam waist at $z=0$.
+	•	$z_R = \pi w_0^2 / \lambda$ is the Rayleigh range.
+	•	$R(z) = z\left(1 + (z_R/z)^2\right)$ is the radius of curvature of the wavefront.
+	•	$L_p^{|l|}(\cdot)$ is the generalized Laguerre polynomial.
+	•	$\zeta(z) = \arctan(z/z_R)$ is the Gouy phase.
+	•	$k = 2\pi/\lambda$ is the wavenumber.
+
+For the simulation, the key takeaway is the phase term $\exp(-il\phi)$, which gives the beam its characteristic helical wavefront.
+
+2. Physics of the Channel: Step-by-Step Impairments
+
+The ideal transmitted signal is distorted by several physical phenomena. These must be modeled sequentially.
+
+2.1. Large-Scale Fading: Path Loss and Shadowing
+
+This models the average signal attenuation over large distances. The formula from rules.md is:
+
+$$
+PL(d);[\mathrm{dB}] = PL(d_0) + 10n \log_{10}\left( \frac{d}{d_0} \right) + X_\sigma
+$$
+
+Where:
+	•	$d$ is the distance between transmitter and user.
+	•	$n$ is the path loss exponent.
+	•	$X_\sigma$ is a zero-mean Gaussian variable with standard deviation $\sigma$.
+
+2.2. Atmospheric Turbulence
+
+a) Statistical Model: The Von K'arm'an Spectrum
+
+$$
+\Phi_n(\kappa) = 0.033 C_n^2 \frac{\exp\left(-\kappa^2 / \kappa_m^2\right)}{\left(\kappa^2 + \kappa_0^2\right)^{11/6}}
+$$
+
+Where:
+	•	$\kappa$ is the spatial frequency.
+	•	$C_n^2$ is the turbulence strength.
+	•	$\kappa_m = 5.92/l_0$, with $l_0$ the inner scale.
+	•	$\kappa_0 = 2\pi/L_0$, with $L_0$ the outer scale.
+
+b) Generating the Phase Screen
+	•	Generate random complex grid $N(k_x, k_y)$.
+	•	Multiply: $F(k_x, k_y) = N(k_x, k_y) \sqrt{\Phi_n(k_x, k_y)}$
+	•	Inverse FFT: $\theta(x, y) = \text{IFFT}[F(k_x, k_y)]$
+
+Distorted field:
+
+$$
+E_{\text{distorted}}(x, y) = E_{\text{incident}}(x, y) \cdot \exp(i \theta(x, y))
+$$
+
+c) OAM Modal Crosstalk
+
+$$
+\alpha_{m,l} = \left| \iint E_{\text{distorted}}(r, \phi) \cdot U_{p,m}^*(r, \phi); r; dr; d\phi \right|^2
+$$
+
+This forms the crosstalk matrix.
+
+2.3. Small-Scale Fading: Rician Fading
+
+$$
+h = \sqrt{\frac{K}{K+1}} h_{\text{LoS}} + \sqrt{\frac{1}{K+1}} h_{\text{NLoS}}
+$$
+
+Where $K$ is the Rician factor.
+
+2.4. Mobility-Induced Effects
+
+a) Random Waypoint Model
+	•	Choose destination $(x_d, y_d)$
+	•	Speed $v \sim U(v_{\text{min}}, v_{\text{max}})$
+	•	Unit vector $\vec{u} = \frac{(x_d - x_k, y_d - y_k)}{| (x_d - x_k, y_d - y_k) |}$
+	•	Update: $(x_{k+1}, y_{k+1}) = (x_k, y_k) + v \cdot \Delta t \cdot \vec{u}$
+
+b) Doppler Shift
+
+$$
+f_D = \frac{v \cos(\theta)}{\lambda}
+$$
+
+Phase shift:
+
+$$
+\phi_{\text{Doppler}}(t) = 2\pi f_D t
+$$
+
+2.5. Antenna Misalignment (Pointing Errors)
+
+$$
+L_{pe} \approx \exp\left( - \frac{|l| r_p^2}{w(z)^2} \right)
+$$
+
+2.6. Atmospheric Attenuation
+
+a) Gaseous Attenuation:
+
+ITU-R P.676 model provides $\gamma_{\text{gas}}$ in dB/km.
+
+b) Rain Attenuation:
+
+$$
+\gamma_{\text{rain}} = k R^\alpha
+$$
+
+Total attenuation:
+
+$$
+A_{\text{atm}};[\mathrm{dB}] = (\gamma_{\text{gas}} + \gamma_{\text{rain}}) \cdot d
+$$
+
+Convert to linear scale before applying.
+
+3. The Received Signal and Channel Matrix
+
+Combined channel matrix:
+
+$$
+H_{m,l} = \sqrt{ \frac{1}{PL(d) \cdot A_{\text{atm, lin}}} } \cdot \sqrt{L_{pe}} \cdot h_{\text{Rician}} \cdot \alpha_{m,l} \cdot \exp(i\phi_{\text{Doppler}})
+$$
+
+Received signal:
+
+$$
+\vec{Y} = \mathbf{H} \vec{X} + \vec{N}
+$$
+
+4. Key Performance Indicators (KPIs)
+
+a) Signal-to-Interference-plus-Noise Ratio (SINR)
+
+$$
+\text{SINR}i = \frac{ |\mathbf{H}{i,i}|^2 P_i }{ \sum_{j \neq i} |\mathbf{H}_{i,j}|^2 P_j + N_0 }
+$$
+
+b) Throughput
+
+$$
+\text{Throughput}_i = B \cdot \log_2(1 + \text{SINR}_i)
+$$
+
+By implementing these formulas, your simulator will generate a rich, physically-grounded dataset that captures the complex interplay of factors affecting OAM communication, providing a robust foundation for training your DL-based handover protocol.
