@@ -9,7 +9,7 @@ from typing import Dict, Any, List, Optional, Tuple
 import matplotlib.pyplot as plt
 
 # Add parent directory to path for imports
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 from environment.oam_env import OAM_Env
 from models.agent import Agent

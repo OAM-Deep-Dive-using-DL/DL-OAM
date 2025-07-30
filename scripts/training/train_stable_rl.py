@@ -10,7 +10,7 @@ from datetime import datetime
 from typing import Dict, Any, Tuple, List, Optional
 
 # Add parent directory to path for imports
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 from environment.stable_oam_env import StableOAM_Env
 from models.agent import Agent
