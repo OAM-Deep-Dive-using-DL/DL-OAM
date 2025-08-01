@@ -2,7 +2,7 @@
 
 # Training parameters
 training:
-  num_episodes: 500  # Increased from 100 for more thorough training
+  num_episodes: 1000 # Increased from 100 for more thorough training
   max_steps_per_episode: 500  # Increased from 200 for longer episodes
   batch_size: 128  # Increased from 64 for more stable learning
   learning_rate: 0.0001
