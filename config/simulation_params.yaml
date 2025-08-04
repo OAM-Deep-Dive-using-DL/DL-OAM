@@ -27,7 +27,7 @@ enhanced_params:
 
 # RL Training Parameters
 training:
-  episodes: 500              # Increased from 100
+  episodes: 1000             # Increased from 100
   max_steps_per_episode: 500 # Increased from 200
   learning_rate: 0.0001      # Decreased for more stable learning
   epsilon_start: 1.0
