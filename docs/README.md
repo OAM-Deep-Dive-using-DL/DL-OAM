@@ -41,49 +41,84 @@ pip install pytest pytest-cov coverage
 
 ## Usage
 
+### Quick Start
+```bash
+# Install dependencies
+pip install -r config/requirements.txt
+
+# Verify installation
+python -c "import sys; sys.path.append('.'); from environment.oam_env import OAM_Env; print('✅ Ready')"
+
+# Train distance-optimized agent
+python scripts/training/train_distance_optimization.py --num-episodes 1000
+
+# Evaluate results
+python scripts/evaluation/evaluate_rl.py
+```
+
 ### Training
 ```bash
-python main.py train
+# Train distance-optimized agent
+python scripts/training/train_distance_optimization.py
+
+# Train standard RL agent
+python scripts/training/train_rl.py
+
+# Train stable RL agent
+python scripts/training/train_stable_rl.py
 ```
 
 ### Evaluation
 ```bash
-python main.py evaluate
+# Evaluate trained agent
+python scripts/evaluation/evaluate_rl.py
 ```
 
-### Testing Advanced Physics
+### Analysis
 ```bash
-python test_advanced_physics_enhanced.py --test all
+# Three-way relationship analysis
+python analysis/analyze_three_way_relationship.py
+
+# Distance optimization analysis
+python scripts/analysis/analyze_distance_optimization.py
 ```
 
-### Basic Physics Testing
-```bash
-python test_advanced_physics.py --all
-```
-
-### Running Tests
+### Testing
 ```bash
 # Run all tests
-./run_tests.sh
+python -m pytest
 
-# Run specific test categories
-./run_tests.sh -t unit
-./run_tests.sh -t integration
-./run_tests.sh -t physics
-./run_tests.sh -t regression
+# Run unit tests only
+python -m pytest tests/unit/ -v
 
-# Run tests with verbose output
-./run_tests.sh -v
+# Run physics tests
+python -m pytest tests/physics/ -v
 ```
 
-### Running Tests with Coverage
+### Verification
+```bash
+# Verify OAM physics
+python scripts/verification/verify_oam_physics.py
+
+# Verify environment
+python scripts/verification/verify_environment.py
+```
+
+### Advanced Testing
 ```bash
 # Run all tests with coverage
-./run_tests_with_coverage.sh
+python -m pytest --cov=. --cov-report=html
 
-# Run specific tests with coverage
-python -m pytest tests/unit/ --cov=. --cov-report=html
+# Run specific test categories
+python -m pytest tests/unit/ -v
+python -m pytest tests/integration/ -v
+python -m pytest tests/physics/ -v
+python -m pytest tests/benchmarks/ -v
 ```
+
+### Command Reference
+- **Quick Reference**: See [`docs/QUICK_REFERENCE.md`](QUICK_REFERENCE.md) for essential commands
+- **Complete Reference**: See [`docs/COMMAND_REFERENCE.md`](COMMAND_REFERENCE.md) for all available commands
 
 ## Project Structure
 
