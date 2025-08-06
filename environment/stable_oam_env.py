@@ -12,6 +12,9 @@ ensure_project_root_in_path()
 
 from .oam_env import OAM_Env
 from simulator.channel_simulator import ChannelSimulator
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from simulator.channel_simulator import ChannelSimulator as SimulatorInterface
 
 
 class StableOAM_Env(OAM_Env):

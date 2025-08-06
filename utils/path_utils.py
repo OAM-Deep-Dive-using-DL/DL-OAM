@@ -78,4 +78,20 @@ def find_file_in_project(filename: str) -> Optional[str]:
         if filename in files:
             return os.path.join(root, filename)
     
-    return None 
+    return None
+
+
+def create_results_dir(name: str) -> str:
+    """
+    Create a results directory with the given name.
+    
+    Args:
+        name: Name for the results directory
+        
+    Returns:
+        Path to the created results directory
+    """
+    project_root = get_project_root()
+    results_dir = os.path.join(project_root, 'results', name)
+    os.makedirs(results_dir, exist_ok=True)
+    return results_dir 

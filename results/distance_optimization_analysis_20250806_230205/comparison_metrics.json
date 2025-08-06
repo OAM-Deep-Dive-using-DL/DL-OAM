@@ -1,0 +1,42 @@
+{
+  "overall": {
+    "baseline_avg_reward": 58.03077993542138,
+    "optimization_avg_reward": 125.9768624456678,
+    "reward_improvement_percent": 117.08628177298175,
+    "baseline_avg_throughput": 392684779.9354216,
+    "optimization_avg_throughput": 470709410.828352,
+    "throughput_improvement_percent": 19.86953273456685,
+    "baseline_avg_handovers": 292945.51,
+    "optimization_avg_handovers": 789907.04,
+    "handover_change_percent": 169.64299265074928
+  },
+  "distance_categories": {
+    "near": {
+      "baseline_throughput": 1326534702.0276508,
+      "optimization_throughput": 1298077386.7324336,
+      "throughput_improvement_percent": -2.1452371544988122,
+      "baseline_avg_distance": 47.879903143684835,
+      "optimization_avg_distance": 48.083408944123335,
+      "baseline_samples": 382,
+      "optimization_samples": 690
+    },
+    "medium": {
+      "baseline_throughput": 636743880.1179143,
+      "optimization_throughput": 841194904.2923906,
+      "throughput_improvement_percent": 32.10883222570044,
+      "baseline_avg_distance": 107.91066386280139,
+      "optimization_avg_distance": 84.45073977909738,
+      "baseline_samples": 39655,
+      "optimization_samples": 23580
+    },
+    "far": {
+      "baseline_throughput": 225333341.74894044,
+      "optimization_throughput": 347813176.3208141,
+      "throughput_improvement_percent": 54.35495414093532,
+      "baseline_avg_distance": 220.4372975272714,
+      "optimization_avg_distance": 181.83722522945223,
+      "baseline_samples": 59963,
+      "optimization_samples": 75730
+    }
+  }
+}

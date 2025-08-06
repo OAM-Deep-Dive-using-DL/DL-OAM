@@ -34,7 +34,11 @@ class InputSanitizer:
         self.allowed_sections = {
             'system', 'oam', 'environment', 'mobility', 'training', 
             'rl_base', 'exploration', 'evaluation', 'network', 'replay_buffer',
-            'enhanced_params', 'reward', 'stable_reward'  # Allow existing sections
+            'enhanced_params', 'reward', 'stable_reward',  # Allow existing sections
+            'distance_optimization', 'distance_thresholds', 'mode_preferences', 
+            'optimization_weights', 'adaptive_parameters', 'distance_reward',
+            'performance_tracking', 'distance_categories', 'optimization_strategies',
+            'distance_sinr_thresholds', 'handover_optimization'  # Distance optimization sections
         }
         
         self.parameter_specs = {
@@ -106,6 +110,71 @@ class InputSanitizer:
                 'reward_min': {'type': (int, float), 'range': (-100, 0), 'required': False},
                 'reward_max': {'type': (int, float), 'range': (0, 100), 'required': False},
                 'sinr_scaling_factor': {'type': (int, float), 'range': (0, 10), 'required': False}
+            },
+            # Distance optimization sections
+            'distance_optimization': {
+                'distance_thresholds': {'type': dict, 'range': None, 'required': False},
+                'mode_preferences': {'type': dict, 'range': None, 'required': False},
+                'optimization_weights': {'type': dict, 'range': None, 'required': False},
+                'adaptive_parameters': {'type': dict, 'range': None, 'required': False},
+                'distance_reward': {'type': dict, 'range': None, 'required': False},
+                'performance_tracking': {'type': dict, 'range': None, 'required': False},
+                'distance_categories': {'type': dict, 'range': None, 'required': False},
+                'optimization_strategies': {'type': dict, 'range': None, 'required': False},
+                'distance_sinr_thresholds': {'type': dict, 'range': None, 'required': False},
+                'handover_optimization': {'type': dict, 'range': None, 'required': False}
+            },
+            'distance_thresholds': {
+                'near_threshold': {'type': (int, float), 'range': (10, 200), 'required': False},
+                'medium_threshold': {'type': (int, float), 'range': (50, 500), 'required': False},
+                'far_threshold': {'type': (int, float), 'range': (100, 1000), 'required': False}
+            },
+            'mode_preferences': {
+                'near_modes': {'type': list, 'range': None, 'required': False},
+                'medium_modes': {'type': list, 'range': None, 'required': False},
+                'far_modes': {'type': list, 'range': None, 'required': False}
+            },
+            'optimization_weights': {
+                'distance_weight': {'type': (int, float), 'range': (0, 1), 'required': False},
+                'throughput_weight': {'type': (int, float), 'range': (0, 1), 'required': False},
+                'stability_weight': {'type': (int, float), 'range': (0, 1), 'required': False}
+            },
+            'adaptive_parameters': {
+                'enabled': {'type': bool, 'range': None, 'required': False},
+                'learning_rate': {'type': (int, float), 'range': (0.001, 0.1), 'required': False},
+                'min_threshold': {'type': (int, float), 'range': (10, 200), 'required': False},
+                'max_threshold': {'type': (int, float), 'range': (100, 1000), 'required': False}
+            },
+            'distance_reward': {
+                'distance_bonus_factor': {'type': (int, float), 'range': (0, 1), 'required': False},
+                'distance_penalty_factor': {'type': (int, float), 'range': (0, 1), 'required': False},
+                'optimization_threshold': {'type': (int, float), 'range': (0, 1), 'required': False}
+            },
+            'performance_tracking': {
+                'enable_history': {'type': bool, 'range': None, 'required': False},
+                'history_length': {'type': int, 'range': (100, 10000), 'required': False},
+                'enable_adaptive_learning': {'type': bool, 'range': None, 'required': False}
+            },
+            'distance_categories': {
+                'near': {'type': dict, 'range': None, 'required': False},
+                'medium': {'type': dict, 'range': None, 'required': False},
+                'far': {'type': dict, 'range': None, 'required': False}
+            },
+            'optimization_strategies': {
+                'conservative': {'type': dict, 'range': None, 'required': False},
+                'balanced': {'type': dict, 'range': None, 'required': False},
+                'aggressive': {'type': dict, 'range': None, 'required': False}
+            },
+            'distance_sinr_thresholds': {
+                'near': {'type': (int, float), 'range': (-20, 10), 'required': False},
+                'medium': {'type': (int, float), 'range': (-20, 10), 'required': False},
+                'far': {'type': (int, float), 'range': (-20, 10), 'required': False}
+            },
+            'handover_optimization': {
+                'enable_distance_aware_handover': {'type': bool, 'range': None, 'required': False},
+                'min_handover_interval': {'type': int, 'range': (1, 50), 'required': False},
+                'handover_hysteresis': {'type': (int, float), 'range': (0, 1), 'required': False},
+                'distance_based_handover_threshold': {'type': bool, 'range': None, 'required': False}
             }
         }
         
