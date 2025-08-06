@@ -1,0 +1,42 @@
+# OAM 6G RL Training Configuration
+# Extends base_config.yaml with RL-specific parameters
+
+# Training parameters
+training:
+  num_episodes: 1000         # Number of training episodes
+  max_steps_per_episode: 500 # Maximum steps per episode
+  batch_size: 128            # Batch size for training
+  learning_rate: 0.0001      # Learning rate
+  gamma: 0.99                # Discount factor
+  target_update_freq: 10     # Episodes between target network updates
+
+# Network architecture
+network:
+  # state_dim is automatically detected from environment
+  action_dim: 3              # [STAY, UP, DOWN]
+  hidden_layers: [128, 128]  # Hidden layer sizes
+  activation: "relu"         # Activation function
+
+# Replay buffer parameters
+replay_buffer:
+  capacity: 50000            # Replay buffer capacity
+  min_samples_to_learn: 1000 # Minimum samples before learning starts
+
+# Exploration parameters
+exploration:
+  epsilon_start: 1.0         # Initial exploration rate
+  epsilon_end: 0.01          # Final exploration rate
+  epsilon_decay: 0.99        # Exploration decay rate
+
+# Evaluation parameters
+evaluation:
+  eval_episodes: 10          # Number of episodes for evaluation
+  eval_frequency: 50         # Episodes between evaluations
+  save_model_frequency: 50   # Episodes between model saves
+
+# Standard reward function parameters
+reward:
+  throughput_factor: 1.0     # Weight for throughput in reward
+  handover_penalty: 0.2      # Penalty for handovers
+  outage_penalty: 1.0        # Penalty for outages
+  sinr_threshold: -5.0       # SINR threshold for outage (dB)

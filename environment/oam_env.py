@@ -1,15 +1,42 @@
 import numpy as np
 import gymnasium as gym
 from gymnasium import spaces
-from typing import Dict, Any, Tuple, List, Optional
+from typing import Dict, Any, Tuple, List, Optional, Protocol
 import math
 import os
 import sys
+from utils.exception_handler import safe_calculation, graceful_degradation, get_exception_handler
 
-# Add parent directory to path for imports
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# Use centralized path management
+from utils.path_utils import ensure_project_root_in_path
+ensure_project_root_in_path()
 
 from simulator.channel_simulator import ChannelSimulator
+from environment.physics_calculator import PhysicsCalculator
+from environment.mobility_model import MobilityModel
+from environment.reward_calculator import RewardCalculator
+
+
+class SimulatorInterface(Protocol):
+    """
+    Interface for channel simulators.
+    
+    This defines the contract that any simulator must implement,
+    enabling dependency injection and easier testing.
+    """
+    
+    def run_step(self, position: np.ndarray, current_mode: int) -> Tuple[np.ndarray, float]:
+        """
+        Run a simulation step.
+        
+        Args:
+            position: Current position [x, y, z]
+            current_mode: Current OAM mode
+            
+        Returns:
+            Tuple of (channel_matrix, sinr_dB)
+        """
+        ...
 
 
 class OAM_Env(gym.Env):
@@ -23,12 +50,26 @@ class OAM_Env(gym.Env):
     
     metadata = {'render_modes': ['human']}
     
-    def __init__(self, config: Optional[Dict[str, Any]] = None):
+    def __init__(self, config: Optional[Dict[str, Any]] = None, simulator: Optional[SimulatorInterface] = None):
         """
         Initialize the OAM environment.
         
         Args:
-            config: Dictionary containing environment parameters
+            config (Optional[Dict[str, Any]]): Configuration dictionary containing environment parameters.
+                If None, uses default values. Expected keys:
+                - 'system': System parameters (frequency, bandwidth, etc.)
+                - 'environment': Environment parameters (humidity, temperature, etc.)
+                - 'oam': OAM parameters (min_mode, max_mode, beam_width)
+            simulator (Optional[SimulatorInterface]): Channel simulator instance for dependency injection.
+                If None, creates default ChannelSimulator.
+                
+        Returns:
+            OAM_Env: Initialized environment instance.
+            
+        Example:
+            >>> env = OAM_Env()  # Default configuration
+            >>> config = {'oam': {'min_mode': 1, 'max_mode': 6}}
+            >>> env = OAM_Env(config)  # Custom configuration
         """
         super(OAM_Env, self).__init__()
         
@@ -39,14 +80,8 @@ class OAM_Env(gym.Env):
         self.velocity_max = 5.0  # m/s
         self.area_size = np.array([500.0, 500.0])  # meters [x, y]
         self.pause_time_max = 5.0  # seconds
-        self.min_mode = 1
-        self.max_mode = 8
-        
-        # Reward function parameters
-        self.throughput_factor = 1.0
-        self.handover_penalty = 0.5
-        self.outage_penalty = 10.0
-        self.sinr_threshold = 0.0  # dB
+        self.min_mode = None  # Will be set from config
+        self.max_mode = None  # Will be set from config
         
         # Time step in seconds
         self.dt = 0.1
@@ -55,11 +90,36 @@ class OAM_Env(gym.Env):
         if config:
             self._update_config(config)
         
-        # Validate parameters
+        # Validate basic environment parameters
         self._validate_environment_parameters()
         
-        # Initialize the channel simulator
-        self.simulator = ChannelSimulator(config)
+        # Initialize the channel simulator (dependency injection)
+        if simulator is not None:
+            self.simulator = simulator
+        else:
+            # Default to ChannelSimulator if no simulator provided
+            self.simulator = ChannelSimulator(config)
+        
+        # Initialize separated components
+        self.physics_calculator = PhysicsCalculator(
+            bandwidth=getattr(self.simulator, 'bandwidth', 400e6)
+        )
+        self.mobility_model = MobilityModel(config)
+        self.reward_calculator = RewardCalculator(config)
+        
+        # OPTIMIZED: Add throughput caching for training efficiency
+        self._throughput_cache = {}
+        self._last_sinr = None
+        self._last_throughput = None
+        
+        # Validate separated components
+        self._validate_separated_components()
+        
+        # Initialize current_mode to prevent None errors
+        if self.min_mode is not None and self.max_mode is not None:
+            self.current_mode = (self.min_mode + self.max_mode) // 2
+        else:
+            self.current_mode = 1  # Default fallback
         
         # Action space: 0 = STAY, 1 = UP, 2 = DOWN
         self.action_space = spaces.Discrete(3)
@@ -129,12 +189,14 @@ class OAM_Env(gym.Env):
             self.min_mode = oam_config.get('min_mode', self.min_mode)
             self.max_mode = oam_config.get('max_mode', self.max_mode)
         
-        if 'reward' in config:
-            reward_config = config['reward']
-            self.throughput_factor = reward_config.get('throughput_factor', self.throughput_factor)
-            self.handover_penalty = reward_config.get('handover_penalty', self.handover_penalty)
-            self.outage_penalty = reward_config.get('outage_penalty', self.outage_penalty)
-            self.sinr_threshold = reward_config.get('sinr_threshold', self.sinr_threshold)
+        # Set default OAM parameters if not provided in config
+        if self.min_mode is None:
+            self.min_mode = 1
+        if self.max_mode is None:
+            self.max_mode = 8
+        
+        # Reward parameters are now handled by the reward calculator
+        # No need to update them here since the reward calculator is initialized with the config
     
     def _validate_environment_parameters(self):
         """Validate environment parameters are within reasonable ranges."""
@@ -155,103 +217,62 @@ class OAM_Env(gym.Env):
         if not (0.01 <= self.dt <= 10.0):
             raise ValueError(f"Time step {self.dt} s is outside reasonable range (0.01-10.0 s)")
         
-        # Reward parameters validation
-        if not (0.1 <= self.throughput_factor <= 10.0):
-            raise ValueError(f"Throughput factor {self.throughput_factor} is outside reasonable range")
-        
-        if not (0.0 <= self.handover_penalty <= 100.0):
-            raise ValueError(f"Handover penalty {self.handover_penalty} is outside reasonable range")
-        
-        if not (0.0 <= self.outage_penalty <= 1000.0):
-            raise ValueError(f"Outage penalty {self.outage_penalty} is outside reasonable range")
+        # Reward parameters are validated by the reward calculator
+        # No need to validate them here
         
         print("✅ Environment parameters validated successfully")
+    
+    def _validate_separated_components(self):
+        """Validate separated components."""
+        # Validate mobility model
+        mob_valid, mob_error = self.mobility_model.validate_mobility_parameters()
+        if not mob_valid:
+            raise ValueError(f"Mobility model validation failed: {mob_error}")
+        
+        # Validate reward calculator
+        reward_valid, reward_error = self.reward_calculator.validate_reward_parameters()
+        if not reward_valid:
+            raise ValueError(f"Reward calculator validation failed: {reward_error}")
+        
+        # Validate physics calculator
+        physics_valid, physics_error = self.physics_calculator.validate_physics_parameters(
+            sinr_dB=0.0, throughput=0.0
+        )
+        if not physics_valid:
+            raise ValueError(f"Physics calculator validation failed: {physics_error}")
+        
+        print("✅ Separated components validated successfully")
 
     def _generate_random_position(self) -> np.ndarray:
         """
-        Generate a random position within the area bounds.
+        Generate a random position using the mobility model.
         
         Returns:
             3D position array [x, y, z]
         """
-        x = np.random.uniform(0, self.area_size[0])
-        y = np.random.uniform(0, self.area_size[1])
-        
-        # Z coordinate is set to ensure the distance is within bounds
-        # We'll set a random distance first
-        distance = np.random.uniform(self.distance_min, self.distance_max)
-        
-        # Calculate z based on x, y, and desired distance
-        # Using Pythagorean theorem: x^2 + y^2 + z^2 = distance^2
-        xy_dist = np.sqrt(x**2 + y**2)
-        if xy_dist > distance:
-            # If x,y already exceeds the desired distance, set z=0 and normalize x,y
-            scale = distance / xy_dist
-            x *= scale
-            y *= scale
-            z = 0
-        else:
-            # Otherwise, calculate z to achieve the desired distance
-            z = np.sqrt(distance**2 - xy_dist**2)
-        
-        return np.array([x, y, z])
+        return self.mobility_model.generate_random_position()
     
     def _generate_random_velocity(self) -> np.ndarray:
         """
-        Generate a random velocity vector.
+        Generate a random velocity using the mobility model.
         
         Returns:
             3D velocity vector [vx, vy, vz]
         """
-        # Generate random direction (unit vector)
-        theta = np.random.uniform(0, 2 * np.pi)
-        phi = np.random.uniform(0, np.pi)
-        
-        direction = np.array([
-            np.sin(phi) * np.cos(theta),
-            np.sin(phi) * np.sin(theta),
-            np.cos(phi)
-        ])
-        
-        # Generate random speed
-        speed = np.random.uniform(self.velocity_min, self.velocity_max)
-        
-        # Return velocity vector
-        return speed * direction
+        return self.mobility_model.generate_random_velocity()
     
     def _update_position(self) -> None:
-        """Update the user's position using the Random Waypoint mobility model."""
-        if self.pause_time > 0:
-            # User is paused at current position
-            self.pause_time -= self.dt
-        else:
-            # Check if user has reached the target
-            dist_to_target = np.linalg.norm(self.position - self.target_position)
-            
-            if dist_to_target < self.velocity_max * self.dt:
-                # User has reached the target, generate a new one and maybe pause
-                self.position = self.target_position
-                self.target_position = self._generate_random_position()
-                self.velocity = self._generate_random_velocity()
-                
-                # Randomly decide whether to pause
-                if np.random.random() < 0.3:  # 30% chance to pause
-                    self.pause_time = np.random.uniform(0, self.pause_time_max)
-            else:
-                # Continue moving towards target
-                direction = (self.target_position - self.position)
-                direction = direction / np.linalg.norm(direction)
-                
-                # Update velocity (direction * speed)
-                speed = np.linalg.norm(self.velocity)
-                self.velocity = direction * speed
-                
-                # Update position
-                self.position += self.velocity * self.dt
+        """
+        Update user position using the mobility model.
+        """
+        self.mobility_model.update_position()
+        self.position = self.mobility_model.get_position()
+        self.velocity = self.mobility_model.get_velocity()
     
+    @safe_calculation("throughput_calculation", fallback_value=0.0)
     def _calculate_throughput(self, sinr_dB: float) -> float:
         """
-        Calculate throughput using Shannon's formula with enhanced error handling.
+        Calculate throughput using the physics calculator with caching.
         
         Args:
             sinr_dB: Signal-to-Interference-plus-Noise Ratio in dB
@@ -259,65 +280,57 @@ class OAM_Env(gym.Env):
         Returns:
             Throughput in bits per second
         """
-        # Input validation
-        if not isinstance(sinr_dB, (int, float)):
-            return 0.0
-            
-        # Handle NaN or infinity
-        if np.isnan(sinr_dB) or np.isinf(sinr_dB):
-            return 0.0
+        # OPTIMIZED: Check if SINR hasn't changed (common in training)
+        if self._last_sinr == sinr_dB:
+            return self._last_throughput
         
-        # Clamp SINR to reasonable bounds
-        sinr_dB = max(min(sinr_dB, 60.0), -40.0)
-            
-        # Convert SINR from dB to linear
-        sinr_linear = 10 ** (sinr_dB / 10)
+        # OPTIMIZED: Check environment cache first
+        sinr_rounded = round(sinr_dB, 1)
+        if sinr_rounded in self._throughput_cache:
+            self._last_sinr = sinr_dB
+            self._last_throughput = self._throughput_cache[sinr_rounded]
+            return self._last_throughput
         
-        # Shannon's formula: C = B * log2(1 + SINR)
-        # Make sure bandwidth is a float
-        try:
-            bandwidth = float(self.simulator.bandwidth)
-            
-            # Add small epsilon to avoid log(1) = 0 issues
-            sinr_for_log = max(sinr_linear, 1e-10)
-            throughput = bandwidth * math.log2(1 + sinr_for_log)
-            
-            # Validate result
-            if np.isnan(throughput) or np.isinf(throughput) or throughput < 0:
-                return 0.0
-            
-            # Cap maximum throughput to theoretical maximum
-            max_throughput = bandwidth * math.log2(1 + 10**(60/10))  # 60 dB SINR max
-            throughput = min(throughput, max_throughput)
-            
-            return throughput
-            
-        except (ValueError, TypeError, OverflowError):
-            return 0.0
+        # Calculate throughput using physics calculator (which has its own caching)
+        throughput = self.physics_calculator.calculate_throughput(sinr_dB)
+        
+        # OPTIMIZED: Cache the result
+        self._throughput_cache[sinr_rounded] = throughput
+        self._last_sinr = sinr_dB
+        self._last_throughput = throughput
+        
+        return throughput
     
     def reset(self, seed: Optional[int] = None, options: Optional[Dict[str, Any]] = None) -> Tuple[np.ndarray, Dict[str, Any]]:
         """
         Reset the environment to an initial state.
         
         Args:
-            seed: Random seed
-            options: Additional options
+            seed (Optional[int]): Random seed for reproducible initialization. Default: None.
+            options (Optional[Dict[str, Any]]): Additional reset options. Default: None.
             
         Returns:
-            Tuple of (initial state, info dictionary)
+            Tuple[np.ndarray, Dict[str, Any]]: (initial_state, info_dict)
+                - initial_state: 8-dimensional state vector [SINR, distance, vx, vy, vz, current_mode, min_mode, max_mode]
+                - info_dict: Additional information including position, velocity, throughput, handovers
+                
+        Example:
+            >>> obs, info = env.reset(seed=42)
+            >>> print(f"Initial SINR: {obs[0]:.2f} dB")
+            >>> print(f"Initial position: {info['position']}")
         """
         super().reset(seed=seed)
         
         # Reset episode tracking
         self.steps = 0
-        self.episode_throughput = 0
-        self.episode_handovers = 0
+        
+        # Reset separated components
+        self.mobility_model.reset()
+        self.reward_calculator.reset_episode()
         
         # Initialize user position and velocity
         self.position = self._generate_random_position()
-        self.target_position = self._generate_random_position()
         self.velocity = self._generate_random_velocity()
-        self.pause_time = 0
         
         # Initialize OAM mode (start in the middle of the range)
         self.current_mode = (self.min_mode + self.max_mode) // 2
@@ -351,10 +364,24 @@ class OAM_Env(gym.Env):
         Take a step in the environment.
         
         Args:
-            action: Action to take (0: STAY, 1: UP, 2: DOWN)
+            action (int): Action to take (0: STAY, 1: UP, 2: DOWN)
+                - 0: Keep current OAM mode
+                - 1: Increase OAM mode (if possible)
+                - 2: Decrease OAM mode (if possible)
             
         Returns:
-            Tuple of (next state, reward, done, truncated, info)
+            Tuple[np.ndarray, float, bool, bool, Dict[str, Any]]: (next_state, reward, terminated, truncated, info)
+                - next_state: Updated state vector
+                - reward: Reward value for the action
+                - terminated: True if episode ended naturally
+                - truncated: True if episode was artificially terminated
+                - info: Additional information including SINR, mode, throughput, handovers
+                
+        Example:
+            >>> action = env.action_space.sample()  # Random action
+            >>> next_obs, reward, terminated, truncated, info = env.step(action)
+            >>> print(f"Reward: {reward:.3f}")
+            >>> print(f"Current mode: {info['mode']}")
         """
         self.steps += 1
         
@@ -371,8 +398,6 @@ class OAM_Env(gym.Env):
         
         # Detect if a handover occurred
         handover_occurred = (prev_mode != self.current_mode)
-        if handover_occurred:
-            self.episode_handovers += 1
         
         # Update user position using mobility model
         self._update_position()
@@ -380,24 +405,11 @@ class OAM_Env(gym.Env):
         # Run simulator to get new channel state
         _, self.current_sinr = self.simulator.run_step(self.position, self.current_mode)
         
-        # Calculate throughput
+        # Calculate throughput using physics calculator
         throughput = self._calculate_throughput(self.current_sinr)
-        self.episode_throughput += throughput
         
-        # Calculate reward
-        reward = self.throughput_factor * throughput / 1e9  # Scale by 10^9 for numerical stability
-        
-        # Apply handover penalty if mode was changed
-        if handover_occurred:
-            reward -= self.handover_penalty
-        
-        # Apply outage penalty if SINR is below threshold
-        if self.current_sinr < self.sinr_threshold:
-            reward -= self.outage_penalty
-            
-        # Handle NaN or infinity in reward
-        if np.isnan(reward) or np.isinf(reward):
-            reward = -self.outage_penalty  # Default to penalty value
+        # Calculate reward using reward calculator
+        reward = self.reward_calculator.calculate_reward(throughput, self.current_sinr, handover_occurred)
         
         # Construct the next state vector
         next_state = np.array([
@@ -416,11 +428,12 @@ class OAM_Env(gym.Env):
         truncated = (self.steps >= self.max_steps)
         
         # Prepare info dictionary
+        episode_stats = self.reward_calculator.get_episode_stats()
         info = {
             'position': self.position,
             'velocity': self.velocity,
             'throughput': throughput,
-            'handovers': self.episode_handovers,
+            'handovers': episode_stats['episode_handovers'],
             'sinr': self.current_sinr,
             'mode': self.current_mode
         }
@@ -433,4 +446,20 @@ class OAM_Env(gym.Env):
     
     def close(self):
         """Clean up resources."""
-        pass 
+        pass
+    
+    def clear_throughput_cache(self):
+        """Clear the throughput cache to free memory."""
+        self._throughput_cache.clear()
+        self._last_sinr = None
+        self._last_throughput = None
+    
+    def get_cache_stats(self) -> dict:
+        """Get cache statistics for monitoring performance."""
+        physics_stats = self.physics_calculator.get_cache_stats()
+        return {
+            'environment_cache_size': len(self._throughput_cache),
+            'last_sinr': self._last_sinr,
+            'last_throughput': self._last_throughput,
+            'physics_calculator_stats': physics_stats
+        } 

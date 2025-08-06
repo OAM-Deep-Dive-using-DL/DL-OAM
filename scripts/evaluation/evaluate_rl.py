@@ -1,20 +1,24 @@
+#!/usr/bin/env python3
 import os
 import sys
 import argparse
-import numpy as np
-import torch
 import yaml
 import json
-from typing import Dict, Any, List, Optional, Tuple
-import matplotlib.pyplot as plt
+import torch
+import numpy as np
+from datetime import datetime
+from typing import Dict, Any, Optional
 
-# Add parent directory to path for imports
-sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+# Use centralized path management instead of sys.path.append
+from utils.path_utils import ensure_project_root_in_path
+ensure_project_root_in_path()
 
-from environment.oam_env import OAM_Env
 from models.agent import Agent
+from environment.oam_env import OAM_Env
+from environment.stable_oam_env import StableOAM_Env
+from utils.visualization_unified import create_evaluation_dashboard, visualize_q_values
 from utils.config_utils import load_config
-from utils.visualization import create_interactive_dashboard, visualize_q_values
+import matplotlib.pyplot as plt
 
 
 def parse_args():
@@ -235,7 +239,7 @@ def evaluate(args: argparse.Namespace) -> None:
     
     # 3. Create interactive dashboard
     dashboard_path = os.path.join(output_dir, "dashboard.html")
-    create_interactive_dashboard(
+    create_evaluation_dashboard(
         episode_rewards,
         episode_throughputs,
         episode_handovers,

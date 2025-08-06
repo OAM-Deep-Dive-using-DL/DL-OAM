@@ -1,25 +1,23 @@
 import os
 import yaml
 from typing import Dict, Any
+from .input_sanitizer import sanitized_config_loader
 
 
 def load_config(config_path: str) -> Dict[str, Any]:
     """
-    Load configuration from a YAML file.
+    Load configuration from a YAML file with sanitization.
     
     Args:
         config_path: Path to the YAML configuration file
         
     Returns:
         Dictionary containing the configuration parameters
+        
+    Raises:
+        ValueError: If configuration is invalid or malicious
     """
-    if not os.path.exists(config_path):
-        raise FileNotFoundError(f"Configuration file not found: {config_path}")
-    
-    with open(config_path, 'r') as f:
-        config = yaml.safe_load(f)
-    
-    return config
+    return sanitized_config_loader(config_path)
 
 
 def save_config(config: Dict[str, Any], save_path: str) -> None:

@@ -2,13 +2,11 @@
 import os
 import argparse
 import numpy as np
-from utils.oam_visualizer import (
-    plot_oam_mode, 
-    plot_multiple_oam_modes, 
-    plot_oam_mode_3d, 
-    visualize_oam_propagation
-)
-from utils.oam_interaction_visualizer import (
+from utils.visualization_unified import (
+    plot_oam_mode,
+    plot_multiple_oam_modes,
+    plot_oam_mode_3d,
+    visualize_oam_propagation,
     plot_oam_superposition,
     visualize_oam_impairments,
     visualize_oam_mode_coupling,

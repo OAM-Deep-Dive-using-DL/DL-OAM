@@ -7,10 +7,12 @@ from typing import List, Tuple, Dict, Any, Optional
 import os
 import sys
 
-# Add parent directory to path for imports
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# Use centralized path management instead of sys.path.append
+from utils.path_utils import ensure_project_root_in_path
+ensure_project_root_in_path()
 
-from models.dqn_model import DQN
+from .dqn_model import DQN
+from models.replay_buffer_interface import ReplayBufferInterface
 from utils.replay_buffer import ReplayBuffer
 
 
@@ -28,24 +30,41 @@ class Agent:
         hidden_layers: List[int] = [128, 128],
         learning_rate: float = 1e-4,
         gamma: float = 0.99,
-        buffer_capacity: int = 100000,
+        buffer_capacity: int = 50000,
         batch_size: int = 64,
         target_update_freq: int = 10,
-        device: Optional[torch.device] = None
+        device: Optional[torch.device] = None,
+        replay_buffer: Optional[ReplayBufferInterface] = None
     ):
         """
-        Initialize the agent.
+        Initialize the DQN agent.
         
         Args:
-            state_dim: Dimension of the state space
-            action_dim: Dimension of the action space
-            hidden_layers: List of hidden layer sizes for the DQN
-            learning_rate: Learning rate for the optimizer
-            gamma: Discount factor for future rewards
-            buffer_capacity: Maximum capacity of the replay buffer
-            batch_size: Batch size for training
-            target_update_freq: Frequency (in episodes) to update target network
-            device: PyTorch device to use (defaults to CUDA if available)
+            state_dim (int): Dimension of the state space (default: 8 for OAM environment)
+            action_dim (int): Number of possible actions (default: 3 for STAY/UP/DOWN)
+            hidden_layers (List[int]): List of hidden layer sizes for the DQN [128, 128]
+            learning_rate (float): Learning rate for the optimizer (default: 1e-4)
+            gamma (float): Discount factor for future rewards (default: 0.99)
+            buffer_capacity (int): Maximum capacity of the replay buffer (default: 50000)
+            batch_size (int): Batch size for training (default: 64)
+            target_update_freq (int): Episodes between target network updates (default: 10)
+            device (Optional[torch.device]): PyTorch device to use (defaults to CUDA if available)
+            replay_buffer (Optional[ReplayBufferInterface]): Custom replay buffer for dependency injection
+            
+        Returns:
+            Agent: Initialized DQN agent instance.
+            
+        Example:
+            >>> agent = Agent(state_dim=8, action_dim=3)  # Basic agent
+            >>> agent = Agent(
+            ...     state_dim=8,
+            ...     action_dim=3,
+            ...     hidden_layers=[256, 128, 64],
+            ...     learning_rate=1e-3,
+            ...     gamma=0.95,
+            ...     buffer_capacity=100000,
+            ...     batch_size=128
+            ... )  # Custom configuration
         """
         # Set device
         if device is None:
@@ -64,8 +83,12 @@ class Agent:
         # Initialize optimizer
         self.optimizer = optim.AdamW(self.policy_net.parameters(), lr=learning_rate, amsgrad=True)
         
-        # Initialize replay buffer
-        self.replay_buffer = ReplayBuffer(buffer_capacity, state_dim, self.device)
+        # Initialize replay buffer (dependency injection)
+        if replay_buffer is not None:
+            self.replay_buffer = replay_buffer
+        else:
+            # Default to standard ReplayBuffer if none provided
+            self.replay_buffer = ReplayBuffer(buffer_capacity, state_dim, self.device)
         
         # Set hyperparameters
         self.gamma = gamma
@@ -78,16 +101,20 @@ class Agent:
         self.episode_count = 0
         self.loss_history = []
     
-    def choose_action(self, state: np.ndarray, epsilon: float) -> int:
+    def choose_action(self, state: np.ndarray, epsilon: float = 0.0) -> int:
         """
         Choose an action using epsilon-greedy policy.
         
         Args:
-            state: Current state vector
-            epsilon: Probability of choosing a random action
+            state (np.ndarray): Current state vector (8-dimensional for OAM environment)
+            epsilon (float): Exploration probability (0.0 = greedy, 1.0 = random). Default: 0.0.
             
         Returns:
-            Selected action
+            int: Selected action (0: STAY, 1: UP, 2: DOWN)
+            
+        Example:
+            >>> action = agent.choose_action(state, epsilon=0.1)  # 10% exploration
+            >>> action = agent.choose_action(state, epsilon=0.0)  # Greedy action
         """
         # Epsilon-greedy action selection
         if random.random() < epsilon:
@@ -105,12 +132,17 @@ class Agent:
                 # Choose action with highest Q-value
                 return torch.argmax(q_values).item()
     
-    def learn(self) -> float:
+    def learn(self) -> Optional[Dict[str, float]]:
         """
-        Update the policy network using a batch from the replay buffer.
+        Perform one learning step using experience replay.
         
         Returns:
-            Loss value from the update
+            Optional[Dict[str, float]]: Training metrics (loss, etc.) or None if buffer too small
+            
+        Example:
+            >>> metrics = agent.learn()
+            >>> if metrics:
+            ...     print(f"Training loss: {metrics['loss']:.4f}")
         """
         # Check if buffer has enough samples
         if not self.replay_buffer.is_ready(self.batch_size):
@@ -150,7 +182,12 @@ class Agent:
         loss_value = loss.item()
         self.loss_history.append(loss_value)
         
-        return loss_value
+        # Return metrics dictionary
+        return {
+            'loss': loss_value,
+            'buffer_size': len(self.replay_buffer),
+            'episode_count': self.episode_count
+        }
     
     def update_target_network(self) -> None:
         """Update the target network with the policy network's weights."""
@@ -173,7 +210,10 @@ class Agent:
         Save both policy and target networks.
         
         Args:
-            save_dir: Directory to save the models
+            save_dir (str): Directory to save the models
+            
+        Example:
+            >>> agent.save_models("models/agent_final")
         """
         os.makedirs(save_dir, exist_ok=True)
         
@@ -188,7 +228,10 @@ class Agent:
         Load both policy and target networks.
         
         Args:
-            save_dir: Directory to load the models from
+            save_dir (str): Directory to load the models from
+            
+        Example:
+            >>> agent.load_models("models/agent_final")
         """
         policy_path = os.path.join(save_dir, "policy_net.pth")
         target_path = os.path.join(save_dir, "target_net.pth")

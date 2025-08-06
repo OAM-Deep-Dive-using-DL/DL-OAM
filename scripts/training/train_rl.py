@@ -1,28 +1,32 @@
+#!/usr/bin/env python3
 import os
 import sys
 import argparse
-import numpy as np
-import torch
-import time
 import yaml
 import json
+import torch
+import numpy as np
 from datetime import datetime
-from typing import Dict, Any, Tuple, List, Optional
+from typing import Dict, Any, Optional
 
-# Add parent directory to path for imports
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+# Use centralized path management instead of sys.path.append
+from utils.path_utils import ensure_project_root_in_path
+ensure_project_root_in_path()
 
-from environment.oam_env import OAM_Env
 from models.agent import Agent
-from utils.config_utils import load_config, merge_configs
-from utils.visualization import MetricsLogger, plot_training_curves
-
+from environment.oam_env import OAM_Env
+from utils.visualization_unified import plot_training_curves
+from utils.config_utils import load_config
+from utils.hierarchical_config import load_hierarchical_config, merge_configs
+from utils.visualization_unified import MetricsLogger
+from utils.state_dimension_validator import validate_state_dimensions, get_state_dimension_report
+import time
 
 def parse_args():
     """Parse command line arguments."""
     parser = argparse.ArgumentParser(description="Train a DQN agent for OAM handover decisions")
     
-    parser.add_argument("--config", type=str, default="config/rl_params.yaml",
+    parser.add_argument("--config", type=str, default="rl_config_new",
                         help="Path to RL configuration file")
     parser.add_argument("--sim-config", type=str, default="config/simulation_params.yaml",
                         help="Path to simulation configuration file")
@@ -128,11 +132,16 @@ def train(args: argparse.Namespace) -> None:
     set_random_seed(args.seed)
     
     # Load configurations
-    rl_config = load_config(args.config)
-    sim_config = load_config(args.sim_config)
-    
-    # Merge configurations
-    config = merge_configs(sim_config, rl_config)
+    if args.config.endswith('.yaml'):
+        # Legacy config file
+        rl_config = load_config(args.config)
+        sim_config = load_config(args.sim_config)
+        
+        # Merge configurations
+        config = merge_configs(sim_config, rl_config)
+    else:
+        # Hierarchical config
+        config = load_hierarchical_config(args.config)
     
     # Create output directory with timestamp
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -166,6 +175,16 @@ def train(args: argparse.Namespace) -> None:
         target_update_freq=config['training']['target_update_freq'],
         device=device
     )
+    
+    # Validate state dimensions
+    print("🔍 Validating state dimensions...")
+    if not validate_state_dimensions(env, config, agent):
+        print("❌ State dimension validation failed!")
+        print(get_state_dimension_report(env, config, agent))
+        raise ValueError("State dimension mismatch detected. Check the validation report above.")
+    else:
+        print("✅ State dimension validation passed!")
+        print(get_state_dimension_report(env, config, agent))
     
     # Create metrics logger
     log_dir = os.path.join(output_dir, "logs")

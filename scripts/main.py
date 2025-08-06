@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
 import os
-import sys
 import argparse
 from typing import List, Dict, Any, Optional
+import sys
 
-# Add parent directory to path for imports
-# sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+# Use centralized path management instead of sys.path.append
+from utils.path_utils import ensure_project_root_in_path
+ensure_project_root_in_path()
 
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# Import hierarchical config system
+from utils.hierarchical_config import load_hierarchical_config
 
 from scripts.training.train_rl import train as train_agent
 from scripts.training.train_stable_rl import train as train_stable_agent
@@ -27,8 +29,8 @@ def parse_args(args: List[str] = None) -> argparse.Namespace:
     
     # Train command
     train_parser = subparsers.add_parser("train", help="Train a DQN agent")
-    train_parser.add_argument("--config", type=str, default="config/rl_params.yaml", help="Path to RL configuration file")
-    train_parser.add_argument("--sim-config", type=str, default="config/simulation_params.yaml", help="Path to simulation configuration file")
+    train_parser.add_argument("--config", type=str, default="rl_config_new", help="Path to RL configuration (hierarchical name or legacy .yaml file)")
+    train_parser.add_argument("--sim-config", type=str, default="config/simulation_params.yaml", help="Path to simulation configuration file (only used with legacy configs)")
     train_parser.add_argument("--output-dir", type=str, default="results", help="Directory to save results")
     train_parser.add_argument("--seed", type=int, default=42, help="Random seed")
     train_parser.add_argument("--no-gpu", action="store_true", help="Disable GPU acceleration")
@@ -39,9 +41,9 @@ def parse_args(args: List[str] = None) -> argparse.Namespace:
     
     # Train with stable rewards command
     train_stable_parser = subparsers.add_parser("train-stable", help="Train a DQN agent with stable rewards")
-    train_stable_parser.add_argument("--config", type=str, default="config/rl_params.yaml", help="Path to RL configuration file")
-    train_stable_parser.add_argument("--sim-config", type=str, default="config/simulation_params.yaml", help="Path to simulation configuration file")
-    train_stable_parser.add_argument("--stable-config", type=str, default="config/stable_reward_params.yaml", help="Path to stable reward configuration file")
+    train_stable_parser.add_argument("--config", type=str, default="rl_config_new", help="Path to RL configuration (hierarchical name or legacy .yaml file)")
+    train_stable_parser.add_argument("--sim-config", type=str, default="config/simulation_params.yaml", help="Path to simulation configuration file (only used with legacy configs)")
+    train_stable_parser.add_argument("--stable-config", type=str, default="stable_reward_config_new", help="Path to stable reward configuration (hierarchical name or legacy .yaml file)")
     train_stable_parser.add_argument("--output-dir", type=str, default="results", help="Directory to save results")
     train_stable_parser.add_argument("--seed", type=int, default=42, help="Random seed")
     train_stable_parser.add_argument("--no-gpu", action="store_true", help="Disable GPU acceleration")

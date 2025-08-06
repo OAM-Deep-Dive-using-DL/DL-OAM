@@ -3,13 +3,15 @@ import torch
 from collections import deque
 import random
 from typing import Tuple, List, Dict, Any, Optional
+from models.replay_buffer_interface import ReplayBufferInterface
 
 
-class ReplayBuffer:
+class ReplayBuffer(ReplayBufferInterface):
     """
     Experience replay buffer for storing and sampling transitions.
     
     Stores (state, action, reward, next_state, done) tuples for RL training.
+    Implements the ReplayBufferInterface for dependency injection.
     """
     
     def __init__(self, capacity: int, state_dim: int, device: torch.device):
@@ -25,7 +27,6 @@ class ReplayBuffer:
         self.state_dim = state_dim
         self.device = device
         self.buffer = deque(maxlen=capacity)
-        self.position = 0
         
     def push(self, state: np.ndarray, action: int, reward: float, 
              next_state: np.ndarray, done: bool) -> None:
@@ -76,4 +77,24 @@ class ReplayBuffer:
     
     def is_ready(self, batch_size: int) -> bool:
         """Check if buffer has enough samples for a batch."""
-        return len(self) >= batch_size 
+        return len(self) >= batch_size
+    
+    def clear(self) -> None:
+        """Clear all transitions from the buffer."""
+        self.buffer.clear()
+    
+    def get_info(self) -> dict:
+        """
+        Get information about the buffer.
+        
+        Returns:
+            Dictionary with buffer information
+        """
+        return {
+            'capacity': self.capacity,
+            'current_size': len(self),
+            'state_dim': self.state_dim,
+            'device': str(self.device),
+            'utilization': len(self) / self.capacity if self.capacity > 0 else 0.0,
+            'type': 'ReplayBuffer'
+        } 

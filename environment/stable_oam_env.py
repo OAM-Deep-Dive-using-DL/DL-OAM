@@ -6,152 +6,197 @@ import math
 import os
 import sys
 
-# Add parent directory to path for imports
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# Use centralized path management instead of sys.path.append
+from utils.path_utils import ensure_project_root_in_path
+ensure_project_root_in_path()
 
-from environment.oam_env import OAM_Env
+from .oam_env import OAM_Env
 from simulator.channel_simulator import ChannelSimulator
 
 
 class StableOAM_Env(OAM_Env):
     """
-    Gymnasium environment for OAM mode handover decisions with a more stable reward function.
+    Stable OAM Environment with enhanced reward function.
     
-    This environment extends the base OAM_Env with modifications to reduce reward variance:
-    1. Reward normalization and scaling
-    2. Moving average for throughput
-    3. Exponential smoothing for rewards
-    4. Relative improvements over baseline
-    5. Bounded reward range
+    This environment extends the base OAM_Env with a more stable reward function
+    that includes throughput normalization, SINR scaling, and relative improvement tracking.
     """
     
-    def __init__(self, config: Optional[Dict[str, Any]] = None):
+    def __init__(self, config: Optional[Dict[str, Any]] = None, simulator: Optional['SimulatorInterface'] = None):
         """
         Initialize the stable OAM environment.
         
         Args:
             config: Dictionary containing environment parameters
+            simulator: Channel simulator instance (for dependency injection)
         """
-        # Initialize additional parameters
-        self.reward_smoothing_factor = 0.7  # Exponential smoothing factor (0-1)
-        self.throughput_window_size = 10  # Size of moving average window
-        self.throughput_history = []  # Store recent throughput values
-        self.baseline_throughput = None  # Baseline throughput for relative improvement
-        self.previous_reward = 0.0  # Previous reward for smoothing
-        self.reward_scale = 1.0  # Scaling factor for reward
-        self.reward_min = -10.0  # Minimum reward value
-        self.reward_max = 10.0  # Maximum reward value
-        self.sinr_scaling_factor = 0.1  # Scale SINR contribution to reward
+        super().__init__(config, simulator)
         
-        # Call parent constructor
-        super().__init__(config)
+        # Initialize stable reward parameters with defaults
+        self.reward_scale = 1.0
+        self.reward_min = -10.0
+        self.reward_max = 10.0
+        self.throughput_window = 10
+        self.throughput_factor = 1.0
+        self.sinr_scaling_factor = 0.5
+        self.handover_penalty = 0.5
+        self.outage_penalty = 10.0
+        self.sinr_threshold = 0.0
+        self.reward_smoothing_factor = 0.1
+        
+        # Initialize stable reward tracking variables
+        self.throughput_history = []
+        self.baseline_throughput = None
+        self.previous_reward = 0.0
+        self.previous_mode = None  # Track previous mode for handover detection
+        
+        # Update with provided config
+        if config:
+            self._update_config(config)
         
     def _update_config(self, config: Dict[str, Any]) -> None:
         """
-        Update environment parameters from configuration.
+        Update stable reward parameters from configuration.
         
         Args:
-            config: Dictionary containing environment parameters
+            config: Dictionary containing stable reward parameters
         """
-        # Call parent method first
-        super()._update_config(config)
-        
-        # Update stable reward parameters
         if 'stable_reward' in config:
             stable_config = config['stable_reward']
-            self.reward_smoothing_factor = stable_config.get('smoothing_factor', self.reward_smoothing_factor)
-            self.throughput_window_size = stable_config.get('window_size', self.throughput_window_size)
-            self.reward_scale = stable_config.get('reward_scale', self.reward_scale)
-            self.reward_min = stable_config.get('reward_min', self.reward_min)
-            self.reward_max = stable_config.get('reward_max', self.reward_max)
-            self.sinr_scaling_factor = stable_config.get('sinr_scaling_factor', self.sinr_scaling_factor)
-    
+            
+            # Reward scaling parameters
+            self.reward_scale = stable_config.get('reward_scale', 1.0)
+            self.reward_min = stable_config.get('reward_min', -10.0)
+            self.reward_max = stable_config.get('reward_max', 10.0)
+            
+            # Throughput normalization parameters
+            self.throughput_window = stable_config.get('throughput_window', 10)
+            self.throughput_factor = stable_config.get('throughput_factor', 1.0)
+            
+            # SINR scaling parameters
+            self.sinr_scaling_factor = stable_config.get('sinr_scaling_factor', 0.5)
+            
+            # Penalty parameters
+            self.handover_penalty = stable_config.get('handover_penalty', 0.5)
+            self.outage_penalty = stable_config.get('outage_penalty', 10.0)
+            self.sinr_threshold = stable_config.get('sinr_threshold', 0.0)
+            
+            # Smoothing parameters
+            self.reward_smoothing_factor = stable_config.get('reward_smoothing_factor', 0.1)
+        
+        # Ensure OAM mode values are preserved from parent
+        if 'oam' in config:
+            oam_config = config['oam']
+            if 'min_mode' in oam_config:
+                self.min_mode = int(oam_config['min_mode'])
+            if 'max_mode' in oam_config:
+                self.max_mode = int(oam_config['max_mode'])
+        
+        # Set default OAM parameters if not provided in config
+        if self.min_mode is None:
+            self.min_mode = 1
+        if self.max_mode is None:
+            self.max_mode = 8
+            
     def _get_moving_avg_throughput(self, current_throughput: float) -> float:
         """
-        Calculate moving average of throughput.
+        Calculate moving average throughput.
         
         Args:
-            current_throughput: Current throughput value
+            current_throughput: Current step throughput
             
         Returns:
             Moving average throughput
         """
-        # Add current throughput to history
         self.throughput_history.append(current_throughput)
         
-        # Keep only the most recent values
-        if len(self.throughput_history) > self.throughput_window_size:
+        # Keep only the last N values
+        if len(self.throughput_history) > self.throughput_window:
             self.throughput_history.pop(0)
         
         # Calculate moving average
-        return np.mean(self.throughput_history)
+        if len(self.throughput_history) > 0:
+            return np.mean(self.throughput_history)
+        else:
+            return current_throughput
     
     def _normalize_throughput(self, throughput: float) -> float:
         """
         Normalize throughput to a reasonable range.
         
         Args:
-            throughput: Raw throughput value
+            throughput: Raw throughput in bps
             
         Returns:
-            Normalized throughput value
+            Normalized throughput
         """
-        # Get theoretical maximum throughput (at 60 dB SINR)
-        max_throughput = self.simulator.bandwidth * math.log2(1 + 10**(60/10))
+        # Normalize to Gbps for numerical stability
+        throughput_gbps = throughput / 1e9
         
-        # Normalize to 0-1 range
-        normalized = throughput / max_throughput
-        
-        return normalized
+        # Apply log scaling to handle large dynamic range
+        if throughput_gbps > 0:
+            return np.log10(1 + throughput_gbps)
+        else:
+            return 0.0
     
     def _calculate_stable_reward(self, throughput: float, sinr_dB: float, handover_occurred: bool) -> float:
         """
-        Calculate a more stable reward.
+        Calculate stable reward with enhanced components.
         
         Args:
-            throughput: Current throughput value
+            throughput: Current throughput
             sinr_dB: Current SINR in dB
-            handover_occurred: Whether a handover occurred
+            handover_occurred: Whether a handover occurred in this step
             
         Returns:
-            Stable reward value
+            Calculated reward
         """
-        # 1. Get moving average throughput
+        # Calculate moving average throughput
         avg_throughput = self._get_moving_avg_throughput(throughput)
         
-        # 2. Initialize baseline throughput if not set
+        # Initialize baseline throughput if not set
         if self.baseline_throughput is None:
             self.baseline_throughput = avg_throughput
         
-        # 3. Calculate relative improvement over baseline
-        if self.baseline_throughput > 0:
-            relative_improvement = (avg_throughput - self.baseline_throughput) / self.baseline_throughput
-        else:
-            relative_improvement = 0
-        
-        # 4. Normalize throughput to 0-1 range
+        # Normalize throughput
         normalized_throughput = self._normalize_throughput(avg_throughput)
         
-        # 5. Calculate reward components
-        throughput_reward = self.throughput_factor * normalized_throughput
-        sinr_reward = self.sinr_scaling_factor * (sinr_dB / 60.0)  # Normalize SINR to -1 to 1 range
-        handover_penalty = self.handover_penalty if handover_occurred else 0
-        outage_penalty = self.outage_penalty if sinr_dB < self.sinr_threshold else 0
+        # Calculate relative improvement over baseline
+        if self.baseline_throughput > 0:
+            relative_improvement = (avg_throughput - self.baseline_throughput) / self.baseline_throughput
+            relative_improvement = np.clip(relative_improvement, -1.0, 1.0)  # Clip to reasonable range
+        else:
+            relative_improvement = 0.0
         
-        # 6. Combine components
-        raw_reward = throughput_reward + sinr_reward - handover_penalty - outage_penalty
+        # Calculate base reward
+        base_reward = self.throughput_factor * normalized_throughput
         
-        # 7. Apply exponential smoothing
-        smoothed_reward = (self.reward_smoothing_factor * self.previous_reward + 
-                          (1 - self.reward_smoothing_factor) * raw_reward)
+        # Add SINR contribution (scaled)
+        sinr_contribution = self.sinr_scaling_factor * (sinr_dB / 30.0)  # Normalize SINR to reasonable range
         
-        # 8. Scale reward
-        scaled_reward = smoothed_reward * self.reward_scale
+        # Add relative improvement contribution
+        improvement_contribution = 2.0 * relative_improvement  # Scale factor of 2.0
         
-        # 9. Clip to bounds
-        final_reward = np.clip(scaled_reward, self.reward_min, self.reward_max)
+        # Apply handover penalty if mode was changed
+        handover_penalty = self.handover_penalty if handover_occurred else 0.0
         
-        # 10. Update previous reward and baseline
+        # Apply outage penalty if SINR is below threshold
+        outage_penalty = self.outage_penalty if sinr_dB < self.sinr_threshold else 0.0
+        
+        # Combine components
+        raw_reward = base_reward + sinr_contribution + improvement_contribution - handover_penalty - outage_penalty
+        
+        # Scale the reward
+        scaled_reward = self.reward_scale * raw_reward
+        
+        # Clip to min/max range
+        clipped_reward = np.clip(scaled_reward, self.reward_min, self.reward_max)
+        
+        # Apply exponential smoothing
+        smoothed_reward = (1 - self.reward_smoothing_factor) * clipped_reward + self.reward_smoothing_factor * self.previous_reward
+        
+        # Update previous reward for next step
+        final_reward = smoothed_reward
         self.previous_reward = smoothed_reward
         
         # Gradually update baseline (slow tracking)
@@ -174,6 +219,7 @@ class StableOAM_Env(OAM_Env):
         self.throughput_history = []
         self.baseline_throughput = None
         self.previous_reward = 0.0
+        self.previous_mode = None  # Reset previous mode tracking
         
         # Call parent reset
         return super().reset(seed=seed, options=options)
@@ -188,33 +234,20 @@ class StableOAM_Env(OAM_Env):
         Returns:
             Tuple of (next state, reward, done, truncated, info)
         """
-        self.steps += 1
+        # Store the previous mode before taking action
+        self.previous_mode = self.current_mode
         
-        # Track the previous mode for handover detection
-        prev_mode = self.current_mode
+        # Call parent step method to handle common functionality
+        next_state, _, done, truncated, info = super().step(action)
         
-        # Update OAM mode based on action
-        if action == 0:  # STAY
-            pass  # Keep the current mode
-        elif action == 1:  # UP
-            self.current_mode = min(self.current_mode + 1, self.max_mode)
-        elif action == 2:  # DOWN
-            self.current_mode = max(self.current_mode - 1, self.min_mode)
+        # Extract values from info dictionary
+        throughput = info['throughput']
         
-        # Detect if a handover occurred
-        handover_occurred = (prev_mode != self.current_mode)
-        if handover_occurred:
-            self.episode_handovers += 1
-        
-        # Update user position using mobility model
-        self._update_position()
-        
-        # Run simulator to get new channel state
-        _, self.current_sinr = self.simulator.run_step(self.position, self.current_mode)
-        
-        # Calculate throughput
-        throughput = self._calculate_throughput(self.current_sinr)
-        self.episode_throughput += throughput
+        # FIXED: Proper per-step handover detection
+        # Compare current mode with previous mode to detect handover in this step
+        current_mode = info['mode']
+        handover_occurred = (self.previous_mode is not None and 
+                           self.previous_mode != current_mode)
         
         # Calculate stable reward
         reward = self._calculate_stable_reward(throughput, self.current_sinr, handover_occurred)
@@ -223,32 +256,9 @@ class StableOAM_Env(OAM_Env):
         if np.isnan(reward) or np.isinf(reward):
             reward = -self.outage_penalty  # Default to penalty value
         
-        # Construct the next state vector
-        next_state = np.array([
-            self.current_sinr,
-            np.linalg.norm(self.position),  # distance
-            self.velocity[0],
-            self.velocity[1],
-            self.velocity[2],
-            self.current_mode,
-            self.min_mode,
-            self.max_mode
-        ], dtype=np.float32)
+        # Add additional info
+        info['avg_throughput'] = self._get_moving_avg_throughput(throughput)
+        info['raw_reward'] = reward
+        info['handover_occurred'] = handover_occurred  # Add handover info for debugging
         
-        # Check if episode is done
-        done = False
-        truncated = (self.steps >= self.max_steps)
-        
-        # Prepare info dictionary
-        info = {
-            'position': self.position,
-            'velocity': self.velocity,
-            'throughput': throughput,
-            'avg_throughput': self._get_moving_avg_throughput(throughput),
-            'handovers': self.episode_handovers,
-            'sinr': self.current_sinr,
-            'mode': self.current_mode,
-            'raw_reward': reward
-        }
-        
-        return next_state, reward, done, truncated, info 
+        return next_state, reward, done, truncated, info

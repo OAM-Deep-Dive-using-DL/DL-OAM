@@ -29,6 +29,9 @@ class DQN(nn.Module):
         """
         super(DQN, self).__init__()
         
+        # Store activation type for weight initialization
+        self.activation = activation
+        
         # Input layer
         layers = []
         prev_dim = state_dim
@@ -46,6 +49,7 @@ class DQN(nn.Module):
                 layers.append(nn.Tanh())
             else:
                 layers.append(nn.ReLU())  # Default to ReLU
+                self.activation = "relu"  # Update activation for consistency
             
             prev_dim = hidden_dim
         
@@ -66,8 +70,18 @@ class DQN(nn.Module):
             module: PyTorch module to initialize
         """
         if isinstance(module, nn.Linear):
-            # Kaiming initialization for ReLU-based networks
-            nn.init.kaiming_normal_(module.weight, nonlinearity='relu')
+            # Use appropriate initialization based on activation function
+            if self.activation == "relu":
+                nn.init.kaiming_normal_(module.weight, nonlinearity='relu')
+            elif self.activation == "leaky_relu":
+                nn.init.kaiming_normal_(module.weight, nonlinearity='leaky_relu')
+            elif self.activation == "tanh":
+                # For tanh, use Xavier/Glorot initialization
+                nn.init.xavier_normal_(module.weight)
+            else:
+                # Default to ReLU initialization
+                nn.init.kaiming_normal_(module.weight, nonlinearity='relu')
+            
             if module.bias is not None:
                 nn.init.constant_(module.bias, 0.0)
     

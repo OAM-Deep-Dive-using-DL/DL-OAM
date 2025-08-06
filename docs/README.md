@@ -1,5 +1,14 @@
 # OAM 6G Handover with Deep Q-Learning
 
+[![Tests](https://github.com/yourusername/oam-6g/actions/workflows/tests.yml/badge.svg)](https://github.com/yourusername/oam-6g/actions/workflows/tests.yml)
+[![Coverage](https://codecov.io/gh/yourusername/oam-6g/branch/main/graph/badge.svg)](https://codecov.io/gh/yourusername/oam-6g)
+[![Lint](https://github.com/yourusername/oam-6g/actions/workflows/lint.yml/badge.svg)](https://github.com/yourusername/oam-6g/actions/workflows/lint.yml)
+[![Docs](https://github.com/yourusername/oam-6g/actions/workflows/docs.yml/badge.svg)](https://github.com/yourusername/oam-6g/actions/workflows/docs.yml)
+[![Physics](https://github.com/yourusername/oam-6g/actions/workflows/physics.yml/badge.svg)](https://github.com/yourusername/oam-6g/actions/workflows/physics.yml)
+[![Benchmarks](https://github.com/yourusername/oam-6g/actions/workflows/benchmark.yml/badge.svg)](https://github.com/yourusername/oam-6g/actions/workflows/benchmark.yml)
+[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 This project implements a Deep Q-Network (DQN) for optimizing OAM (Orbital Angular Momentum) mode handover in 6G wireless networks. The system uses reinforcement learning to intelligently switch between OAM modes based on channel conditions, user mobility, and network performance.
 
 ## Features
@@ -26,7 +35,8 @@ source oam_rl_env/bin/activate  # On Windows: oam_rl_env\Scripts\activate
 
 2. Install dependencies:
 ```bash
-pip install -r requirements.txt
+pip install -r config/requirements.txt
+pip install pytest pytest-cov coverage
 ```
 
 ## Usage
@@ -51,31 +61,78 @@ python test_advanced_physics_enhanced.py --test all
 python test_advanced_physics.py --all
 ```
 
+### Running Tests
+```bash
+# Run all tests
+./run_tests.sh
+
+# Run specific test categories
+./run_tests.sh -t unit
+./run_tests.sh -t integration
+./run_tests.sh -t physics
+./run_tests.sh -t regression
+
+# Run tests with verbose output
+./run_tests.sh -v
+```
+
+### Running Tests with Coverage
+```bash
+# Run all tests with coverage
+./run_tests_with_coverage.sh
+
+# Run specific tests with coverage
+python -m pytest tests/unit/ --cov=. --cov-report=html
+```
+
 ## Project Structure
 
 ```
 ├── simulator/                 # Channel simulation modules
 │   └── channel_simulator.py   # Main physics-based simulator
 ├── environment/               # RL environment
-│   └── oam_env.py             # Gymnasium environment wrapper
+│   ├── oam_env.py             # Base Gymnasium environment wrapper
+│   └── stable_oam_env.py      # Stable reward environment
 ├── models/                    # Neural network models
-│   ├── dqn_model.py          # DQN architecture
-│   └── agent.py              # RL agent implementation
+│   ├── dqn_model.py           # DQN architecture
+│   └── agent.py               # RL agent implementation
 ├── config/                    # Configuration files
-│   └── simulation_params.yaml # Simulation parameters
+│   ├── simulation_params.yaml # Simulation parameters
+│   ├── base_config_new.yaml   # Base configuration
+│   ├── rl_config_new.yaml     # RL configuration
+│   └── extended_training_config.yaml # Extended training configuration
 ├── utils/                     # Utility functions
-│   └── visualization.py      # Plotting and visualization
+│   ├── visualization.py       # Plotting and visualization
+│   ├── config_utils.py        # Configuration utilities
+│   └── hierarchical_config.py # Hierarchical configuration system
+├── tests/                     # Test suite
+│   ├── unit/                  # Unit tests
+│   ├── integration/           # Integration tests
+│   ├── physics/               # Physics tests
+│   └── regression/            # Regression tests
 ├── plots/                     # 📊 All generated visualizations
 │   ├── enhanced_*.png         # Enhanced physics plots
-│   ├── physics/              # Physics validation plots
-│   ├── training/             # Training progress plots
-│   ├── evaluation/           # Model evaluation plots
-│   └── analysis/             # Performance analysis plots
+│   ├── physics/               # Physics validation plots
+│   ├── training/              # Training progress plots
+│   ├── evaluation/            # Model evaluation plots
+│   └── analysis/              # Performance analysis plots
 ├── results/                   # Training results and logs
-├── main.py                   # Main entry point
-├── train_rl.py              # Training script
-├── evaluate_rl.py           # Evaluation script
-└── organize_plots.py        # Plot organization utility
+├── docs/                      # Documentation
+│   ├── README.md              # Main documentation
+│   ├── CODE_COVERAGE.md       # Coverage documentation
+│   └── TESTING.md             # Testing documentation
+├── .github/workflows/         # CI/CD workflows
+│   ├── tests.yml              # Test workflow
+│   ├── coverage.yml           # Coverage workflow
+│   ├── lint.yml               # Linting workflow
+│   ├── physics.yml            # Physics validation workflow
+│   ├── docs.yml               # Documentation workflow
+│   ├── environment.yml        # Environment verification workflow
+│   └── benchmark.yml          # Performance benchmarking workflow
+├── main.py                    # Main entry point
+├── run_tests.sh               # Test runner script
+├── run_tests_with_coverage.sh # Coverage runner script
+└── .coveragerc                # Coverage configuration
 ```
 
 ## Plots Directory

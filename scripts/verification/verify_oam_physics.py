@@ -3,8 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.special import assoc_laguerre
 import os
-from utils.oam_visualizer import generate_oam_mode
-from utils.oam_interaction_visualizer import generate_oam_superposition, apply_turbulence, apply_pointing_error
+from utils.visualization_unified import generate_oam_mode, generate_oam_superposition, apply_turbulence, apply_pointing_error
 
 
 def generate_theoretical_lg_mode(l: int, p: int = 0, size: int = 500, beam_width: float = 0.3) -> np.ndarray:

@@ -29,7 +29,7 @@ network:
   state_dim: 8
 oam:
   beam_width: 0.03
-  max_mode: 6
+  max_mode: 8                # Standardized to match base config
   min_mode: 1
   mode_spacing: 1
 replay_buffer:
@@ -40,11 +40,6 @@ reward:
   outage_penalty: 5.0
   sinr_threshold: -5.0
   throughput_factor: 5.0
-rl_env:
-  handover_penalty: 0.2
-  outage_penalty: 1.0
-  sinr_threshold: -5.0
-  throughput_factor: 1.0
 stable_reward:
   reward_max: 10.0
   reward_min: -10.0
@@ -60,14 +55,9 @@ system:
   tx_power_dBm: 30.0
 training:
   batch_size: 128
-  episodes: 1000  # Extended to 1000 episodes
-  epsilon_decay: 0.995  # Slower decay
-  epsilon_end: 0.01
-  epsilon_start: 1.0
   gamma: 0.99
   learning_rate: 0.0001
   max_steps_per_episode: 500
-  memory_size: 100000  # Increased buffer size
   num_episodes: 1000  # Extended training
   target_update_freq: 20  # Update target network less frequently
   target_update_interval: 20 
