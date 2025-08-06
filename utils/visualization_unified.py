@@ -27,22 +27,6 @@ from .visualization_consolidated import (
     plot_heatmap
 )
 
-from .oam_visualizer_consolidated import (
-    generate_oam_mode,
-    plot_oam_mode,
-    plot_multiple_oam_modes,
-    plot_oam_mode_3d,
-    visualize_oam_propagation,
-    generate_oam_superposition,
-    plot_oam_superposition,
-    apply_turbulence,
-    apply_pointing_error,
-    visualize_oam_impairments,
-    visualize_oam_mode_coupling,
-    visualize_oam_crosstalk_matrix,
-    generate_all_visualizations
-)
-
 # Create alias for evaluation dashboard
 create_evaluation_dashboard = create_interactive_dashboard
 
@@ -58,21 +42,6 @@ __all__ = [
     'plot_comparison',
     'plot_metrics_grid',
     'plot_heatmap',
-    
-    # OAM visualization
-    'generate_oam_mode',
-    'plot_oam_mode',
-    'plot_multiple_oam_modes',
-    'plot_oam_mode_3d',
-    'visualize_oam_propagation',
-    'generate_oam_superposition',
-    'plot_oam_superposition',
-    'apply_turbulence',
-    'apply_pointing_error',
-    'visualize_oam_impairments',
-    'visualize_oam_mode_coupling',
-    'visualize_oam_crosstalk_matrix',
-    'generate_all_visualizations',
     
     # Evaluation dashboard
     'create_evaluation_dashboard',

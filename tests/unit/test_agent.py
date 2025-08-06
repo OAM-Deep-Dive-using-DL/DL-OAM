@@ -18,7 +18,7 @@ class TestAgent:
         agent = Agent(
             state_dim=8,
             action_dim=3,
-            hidden_layers=rl_config['network']['hidden_layers'],
+            hidden_layers=rl_config['rl_base']['network']['hidden_layers'],
             learning_rate=rl_config['training']['learning_rate'],
             gamma=rl_config['training']['gamma'],
             buffer_capacity=rl_config['rl_base']['replay_buffer']['capacity'],
