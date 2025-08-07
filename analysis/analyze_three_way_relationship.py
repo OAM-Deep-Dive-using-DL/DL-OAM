@@ -8,6 +8,9 @@ distance, and throughput in OAM 6G systems.
 
 import numpy as np
 import matplotlib.pyplot as plt
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from environment.oam_env import OAM_Env
 import pandas as pd
 from mpl_toolkits.mplot3d import Axes3D
@@ -16,7 +19,7 @@ import seaborn as sns
 def analyze_three_way_relationship():
     """Analyze the three-way relationship between handover count, distance, and throughput."""
     
-    print("🔍 Analyzing Three-Way Relationship: Handover Count vs Distance vs Throughput")
+    print("Analyzing Three-Way Relationship: Handover Count vs Distance vs Throughput")
     print("=" * 70)
     
     # Initialize environment
@@ -38,7 +41,7 @@ def analyze_three_way_relationship():
     num_episodes = 100
     steps_per_episode = 50
     
-    print(f"📊 Collecting data from {num_episodes} episodes...")
+    print(f"Collecting data from {num_episodes} episodes...")
     
     for episode in range(num_episodes):
         state_tuple = env.reset()
@@ -93,11 +96,11 @@ def analyze_three_way_relationship():
     # Convert to DataFrame for analysis
     df = pd.DataFrame(data)
     
-    print("\n📈 THREE-WAY ANALYSIS RESULTS:")
+    print("\nTHREE-WAY ANALYSIS RESULTS:")
     print("-" * 50)
     
     # 1. Correlation Analysis
-    print("📊 Correlation Analysis:")
+    print("Correlation Analysis:")
     correlations = {
         'Throughput-Handover': df['throughput'].corr(df['handovers']),
         'Throughput-Distance': df['throughput'].corr(df['distance']),
@@ -110,7 +113,7 @@ def analyze_three_way_relationship():
         print(f"   {name}: {corr:.3f}")
     
     # 2. Distance Impact Analysis
-    print(f"\n📏 Distance Impact Analysis:")
+    print(f"\nDistance Impact Analysis:")
     distance_bins = pd.cut(df['distance'], bins=5)
     distance_analysis = df.groupby(distance_bins).agg({
         'throughput': ['mean', 'std'],
@@ -127,7 +130,7 @@ def analyze_three_way_relationship():
         print(f"   {distance_range} | {throughput:.0f} bps | {handovers:.1f} | {sinr:.1f} dB")
     
     # 3. Handover Impact Analysis
-    print(f"\n🔄 Handover Impact Analysis:")
+    print(f"\nHandover Impact Analysis:")
     handover_bins = pd.cut(df['handovers'], bins=5)
     handover_analysis = df.groupby(handover_bins).agg({
         'throughput': ['mean', 'std'],
@@ -144,7 +147,7 @@ def analyze_three_way_relationship():
         print(f"   {handover_range} | {throughput:.0f} bps | {distance:.0f}m | {sinr:.1f} dB")
     
     # 4. Three-Way Interaction Analysis
-    print(f"\n🎯 Three-Way Interaction Analysis:")
+    print(f"\nThree-Way Interaction Analysis:")
     
     # Create distance-handover groups
     df['distance_group'] = pd.cut(df['distance'], bins=3, labels=['Near', 'Medium', 'Far'])
@@ -226,7 +229,7 @@ def create_three_way_visualizations(df: pd.DataFrame):
     
     plt.tight_layout()
     plt.savefig('three_way_relationship_analysis.png', dpi=300, bbox_inches='tight')
-    print(f"\n📊 Visualization saved as 'three_way_relationship_analysis.png'")
+    print(f"\nVisualization saved as 'three_way_relationship_analysis.png'")
     
     # Create detailed analysis
     create_detailed_three_way_analysis(df)
@@ -234,7 +237,7 @@ def create_three_way_visualizations(df: pd.DataFrame):
 def create_detailed_three_way_analysis(df: pd.DataFrame):
     """Create detailed analysis of the three-way relationship."""
     
-    print(f"\n🔍 DETAILED THREE-WAY ANALYSIS:")
+    print(f"\nDETAILED THREE-WAY ANALYSIS:")
     print("=" * 50)
     
     # 1. Optimal Operating Regions
@@ -256,7 +259,7 @@ def create_detailed_three_way_analysis(df: pd.DataFrame):
         print(f"   {i:2d}   | {throughput:9.0f} | {distance:7.0f}m | {handovers:9.0f} | {score:15.0f}")
     
     # 2. Distance Threshold Analysis
-    print(f"\n📏 Distance Threshold Analysis:")
+    print(f"\nDistance Threshold Analysis:")
     
     distance_thresholds = [50, 100, 150, 200, 250]
     for threshold in distance_thresholds:
@@ -275,7 +278,7 @@ def create_detailed_three_way_analysis(df: pd.DataFrame):
             print()
     
     # 3. Handover Efficiency Analysis
-    print(f"\n🔄 Handover Efficiency Analysis:")
+    print(f"\nHandover Efficiency Analysis:")
     
     # Calculate efficiency metric
     df['handover_efficiency'] = df['throughput'] / (1 + df['handovers'] * 0.01)  # 1% penalty per handover
@@ -290,7 +293,7 @@ def create_detailed_three_way_analysis(df: pd.DataFrame):
         print(f"   {distance_range} | {mean_eff:.0f} bps | {std_eff:.0f} bps")
     
     # 4. System Design Recommendations
-    print(f"\n💡 SYSTEM DESIGN RECOMMENDATIONS:")
+    print(f"\nSYSTEM DESIGN RECOMMENDATIONS:")
     print("-" * 40)
     
     # Analyze the three-way tradeoff
@@ -303,25 +306,25 @@ def create_detailed_three_way_analysis(df: pd.DataFrame):
     print(f"   Distance-Handover Interaction: {distance_handover_interaction:.3f}")
     
     if abs(distance_impact) > 0.5:
-        print(f"   ⚠️  Strong distance impact on throughput")
-        print(f"   💡 Recommendation: Implement distance-aware mode selection")
+        print(f"   ->  Strong distance impact on throughput")
+        print(f"   ->  Recommendation: Implement distance-aware mode selection")
     
     if abs(handover_impact) > 0.1:
-        print(f"   ⚠️  Handover frequency affects throughput")
-        print(f"   💡 Recommendation: Optimize handover strategy")
+        print(f"   ->  Handover frequency affects throughput")
+        print(f"   ->  Recommendation: Optimize handover strategy")
     else:
-        print(f"   ✅ Handovers don't significantly impact throughput")
-        print(f"   💡 Recommendation: Use adaptive mode switching")
+        print(f"   -> Handovers don't significantly impact throughput")
+        print(f"   -> Recommendation: Use adaptive mode switching")
     
     if abs(distance_handover_interaction) > 0.1:
-        print(f"   🔄 Distance and handovers are correlated")
-        print(f"   💡 Recommendation: Implement distance-aware handover prediction")
+        print(f"   -> Distance and handovers are correlated")
+        print(f"   ->  Recommendation: Implement distance-aware handover prediction")
     else:
-        print(f"   ➖ Distance and handovers are independent")
-        print(f"   💡 Recommendation: Optimize distance and handovers separately")
+        print(f"   -> Distance and handovers are independent")
+        print(f"   ->  Recommendation: Optimize distance and handovers separately")
     
     # 5. Performance Optimization Strategy
-    print(f"\n🚀 PERFORMANCE OPTIMIZATION STRATEGY:")
+    print(f"\n PERFORMANCE OPTIMIZATION STRATEGY:")
     print("-" * 40)
     
     # Find optimal operating points
@@ -334,14 +337,14 @@ def create_detailed_three_way_analysis(df: pd.DataFrame):
     
     # Recommendations
     if optimal_near - optimal_far > 500000000:  # 500M bps difference
-        print(f"   ⚠️  Large performance gap between near and far ranges")
-        print(f"   💡 Recommendation: Focus on distance optimization")
+        print(f"   -> Large performance gap between near and far ranges")
+        print(f"   -> Recommendation: Focus on distance optimization")
     else:
-        print(f"   ✅ Relatively consistent performance across distances")
-        print(f"   💡 Recommendation: Focus on handover optimization")
+        print(f"   -> Relatively consistent performance across distances")
+        print(f"   -> Recommendation: Focus on handover optimization")
 
 if __name__ == "__main__":
     # Run the analysis
     df = analyze_three_way_relationship()
     
-    print(f"\n✅ Three-way analysis complete! Generated comprehensive visualizations and recommendations.") 
+    print(f"\nThree-way analysis complete! Generated comprehensive visualizations and recommendations.") 

@@ -53,25 +53,33 @@ class MobilityModel:
         Returns:
             3D position array [x, y, z]
         """
-        x = np.random.uniform(0, self.area_size[0])
-        y = np.random.uniform(0, self.area_size[1])
+        # Generate a more balanced distance distribution
+        # Use a mixed distribution to ensure all categories are represented
+        # 33% near (50-100m), 33% medium (100-200m), 33% far (200-300m)
+        category_choice = np.random.choice(['near', 'medium', 'far'], p=[0.33, 0.33, 0.34])
         
-        # Z coordinate is set to ensure the distance is within bounds
-        # We'll set a random distance first
-        distance = np.random.uniform(50.0, 300.0)  # Reasonable distance range
+        if category_choice == 'near':
+            distance = np.random.uniform(50.0, 100.0)
+        elif category_choice == 'medium':
+            distance = np.random.uniform(100.0, 200.0)
+        else:  # far
+            distance = np.random.uniform(200.0, 300.0)
         
-        # Calculate z based on x, y, and desired distance
-        # Using Pythagorean theorem: x^2 + y^2 + z^2 = distance^2
-        xy_dist = np.sqrt(x**2 + y**2)
-        if xy_dist > distance:
-            # If x,y already exceeds the desired distance, set z=0 and normalize x,y
-            scale = distance / xy_dist
-            x *= scale
-            y *= scale
-            z = 0
-        else:
-            # Otherwise, calculate z to achieve the desired distance
-            z = np.sqrt(distance**2 - xy_dist**2)
+        # Generate random direction
+        theta = np.random.uniform(0, 2 * np.pi)
+        phi = np.random.uniform(0, np.pi)
+        
+        # Convert to Cartesian coordinates
+        x = distance * np.sin(phi) * np.cos(theta)
+        y = distance * np.sin(phi) * np.sin(theta)
+        z = distance * np.cos(phi)
+        
+        # Ensure position is within area bounds
+        x = np.clip(x, 0, self.area_size[0])
+        y = np.clip(y, 0, self.area_size[1])
+        
+        # Recalculate distance after clipping to ensure it's accurate
+        actual_distance = np.sqrt(x**2 + y**2 + z**2)
         
         return np.array([x, y, z])
     

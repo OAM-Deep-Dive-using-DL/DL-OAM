@@ -195,6 +195,11 @@ class OAM_Env(gym.Env):
         if self.max_mode is None:
             self.max_mode = 8
         
+        # Load training parameters
+        if 'training' in config:
+            training_config = config['training']
+            self.max_steps = training_config.get('max_steps_per_episode', self.max_steps)
+        
         # Reward parameters are now handled by the reward calculator
         # No need to update them here since the reward calculator is initialized with the config
     

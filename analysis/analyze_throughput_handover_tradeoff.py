@@ -8,6 +8,9 @@ in orbital angular momentum (OAM) based wireless communication systems.
 
 import numpy as np
 import matplotlib.pyplot as plt
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from environment.oam_env import OAM_Env
 from models.agent import Agent
 import pandas as pd
@@ -16,7 +19,7 @@ from typing import Dict, List, Tuple
 def analyze_throughput_handover_tradeoff():
     """Analyze the throughput vs handover tradeoff in OAM 6G system."""
     
-    print("🔍 Analyzing Throughput vs Handover Tradeoff in OAM 6G System")
+    print("Analyzing Throughput vs Handover Tradeoff in OAM 6G System")
     print("=" * 60)
     
     # Initialize environment

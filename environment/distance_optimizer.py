@@ -241,6 +241,9 @@ class DistanceOptimizer:
             'should_change': should_change
         }
         
+        # Store optimization score for statistics
+        self.optimization_scores.append(optimization_score)
+        
         if should_change:
             self.successful_optimizations += 1
         

@@ -148,11 +148,13 @@ def train_distance_optimization_agent(config: Dict[str, Any],
         
         # Print progress
         if episode % 100 == 0:
-            print(f"Episode {episode}/{num_episodes} | "
-                  f"Reward: {episode_reward:.2f} | "
-                  f"Throughput: {avg_throughput/1e6:.1f} Mbps | "
-                  f"Distance: {avg_distance:.1f}m | "
-                  f"Opt Score: {avg_optimization_score:.3f}")
+            throughput_mbps = avg_throughput/1e6
+            print(f"Episode {episode}/{num_episodes}")
+            print(f"  Reward: {episode_reward:.2f}")
+            print(f"  Throughput: {throughput_mbps:.1f} Mbps")
+            print(f"  Distance: {avg_distance:.1f}m")
+            print(f"  Opt Score: {avg_optimization_score:.3f}")
+            print()
     
     # Save models
     models_dir = os.path.join(results_dir, 'models')
@@ -349,8 +351,13 @@ def main():
     if category_performance:
         print(f"\n📏 Distance Category Performance:")
         for category, stats in category_performance.items():
-            print(f"   {category.capitalize()}: {stats['avg_throughput']/1e6:.1f} Mbps, "
-                  f"{stats['avg_distance']:.1f}m, Score: {stats['avg_optimization_score']:.3f}")
+            throughput_mbps = stats['avg_throughput']/1e6
+            distance_m = stats['avg_distance']
+            score = stats['avg_optimization_score']
+            print(f"   {category.capitalize()}:")
+            print(f"     Throughput: {throughput_mbps:.1f} Mbps")
+            print(f"     Distance: {distance_m:.1f}m")
+            print(f"     Score: {score:.3f}")
     
     print(f"\n📁 All results saved to: {results_dir}")
 

@@ -1,0 +1,35 @@
+{
+  "final_stats": {
+    "total_optimizations": 2000,
+    "successful_optimizations": 271,
+    "success_rate": 0.1355,
+    "adaptive_thresholds": {
+      "near": 50.0,
+      "medium": 50.0,
+      "far": 300.0
+    },
+    "average_optimization_score": 0.5726213641185554,
+    "total_distance_optimizations": 1000,
+    "successful_distance_optimizations": 44,
+    "optimization_success_rate": 0.044,
+    "average_distance": 108.44969987544123,
+    "average_throughput": 615278669.4002157,
+    "mode_change_frequency": 0.3170731707317073
+  },
+  "distance_category_performance": {
+    "far": {
+      "count": 1000,
+      "avg_throughput": 615278669.4002157,
+      "avg_distance": 108.44969987544123,
+      "avg_optimization_score": 0.5134669141185554,
+      "mode_change_rate": 0.044
+    }
+  },
+  "training_summary": {
+    "total_episodes": 1000,
+    "final_avg_reward": 117.1112459850203,
+    "final_avg_throughput": 444.6931424534638,
+    "final_avg_distance": 166.5890024456118,
+    "final_avg_optimization_score": 0.4070853856911523
+  }
+}
