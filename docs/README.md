@@ -1,11 +1,11 @@
 # OAM 6G Handover with Deep Q-Learning
 
-[![Tests](https://github.com/yourusername/oam-6g/actions/workflows/tests.yml/badge.svg)](https://github.com/yourusername/oam-6g/actions/workflows/tests.yml)
-[![Coverage](https://codecov.io/gh/yourusername/oam-6g/branch/main/graph/badge.svg)](https://codecov.io/gh/yourusername/oam-6g)
-[![Lint](https://github.com/yourusername/oam-6g/actions/workflows/lint.yml/badge.svg)](https://github.com/yourusername/oam-6g/actions/workflows/lint.yml)
-[![Docs](https://github.com/yourusername/oam-6g/actions/workflows/docs.yml/badge.svg)](https://github.com/yourusername/oam-6g/actions/workflows/docs.yml)
-[![Physics](https://github.com/yourusername/oam-6g/actions/workflows/physics.yml/badge.svg)](https://github.com/yourusername/oam-6g/actions/workflows/physics.yml)
-[![Benchmarks](https://github.com/yourusername/oam-6g/actions/workflows/benchmark.yml/badge.svg)](https://github.com/yourusername/oam-6g/actions/workflows/benchmark.yml)
+[![Tests](https://github.com/srivatsadavuluriiii/oam-6g/actions/workflows/tests.yml/badge.svg)](https://github.com/srivatsadavuluriiii/oam-6g/actions/workflows/tests.yml)
+[![Coverage](https://codecov.io/gh/srivatsadavuluriiii/oam-6g/branch/main/graph/badge.svg)](https://codecov.io/gh/srivatsadavuluriiii/oam-6g)
+[![Lint](https://github.com/srivatsadavuluriiii/oam-6g/actions/workflows/lint.yml/badge.svg)](https://github.com/srivatsadavuluriiii/oam-6g/actions/workflows/lint.yml)
+[![Docs](https://github.com/srivatsadavuluriiii/oam-6g/actions/workflows/docs.yml/badge.svg)](https://github.com/srivatsadavuluriiii/oam-6g/actions/workflows/docs.yml)
+[![Physics](https://github.com/srivatsadavuluriiii/oam-6g/actions/workflows/physics.yml/badge.svg)](https://github.com/srivatsadavuluriiii/oam-6g/actions/workflows/physics.yml)
+[![Benchmarks](https://github.com/srivatsadavuluriiii/oam-6g/actions/workflows/benchmark.yml/badge.svg)](https://github.com/srivatsadavuluriiii/oam-6g/actions/workflows/benchmark.yml)
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
