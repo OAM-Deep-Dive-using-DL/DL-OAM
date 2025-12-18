@@ -1,14 +1,5 @@
 # OAM 6G Handover with Deep Q-Learning
 
-[![Tests](https://github.com/srivatsadavuluriiii/oam-6g/actions/workflows/tests.yml/badge.svg)](https://github.com/srivatsadavuluriiii/oam-6g/actions/workflows/tests.yml)
-[![Coverage](https://codecov.io/gh/srivatsadavuluriiii/oam-6g/branch/main/graph/badge.svg)](https://codecov.io/gh/srivatsadavuluriiii/oam-6g)
-[![Lint](https://github.com/srivatsadavuluriiii/oam-6g/actions/workflows/lint.yml/badge.svg)](https://github.com/srivatsadavuluriiii/oam-6g/actions/workflows/lint.yml)
-[![Docs](https://github.com/srivatsadavuluriiii/oam-6g/actions/workflows/docs.yml/badge.svg)](https://github.com/srivatsadavuluriiii/oam-6g/actions/workflows/docs.yml)
-[![Physics](https://github.com/srivatsadavuluriiii/oam-6g/actions/workflows/physics.yml/badge.svg)](https://github.com/srivatsadavuluriiii/oam-6g/actions/workflows/physics.yml)
-[![Benchmarks](https://github.com/srivatsadavuluriiii/oam-6g/actions/workflows/benchmark.yml/badge.svg)](https://github.com/srivatsadavuluriiii/oam-6g/actions/workflows/benchmark.yml)
-[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-
 This project implements a Deep Q-Network (DQN) for optimizing OAM (Orbital Angular Momentum) mode handover in 6G wireless networks. The system uses reinforcement learning to intelligently switch between OAM modes based on channel conditions, user mobility, and network performance.
 
 ## Features
